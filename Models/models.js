@@ -126,6 +126,16 @@ CustomerUserSchema.statics.toClassInstance = function (doc) {
     );
 };
 
+// Declaraciones de modelos principales
+const Category = mongoose.model('Category', CategorySchema);
+const Cart = mongoose.model('Cart', CartSchema);
+const Sale = mongoose.model('Sale', SaleSchema);
+const Product = mongoose.model('Product', ProductSchema);
+
+// Declaración de CustomerUser debe ir antes de AdminUser
+const CustomerUser = mongoose.model('CustomerUser', CustomerUserSchema);
+
+// Ahora sí puedes usar CustomerUser para declarar AdminUser
 const AdminUser = CustomerUser.discriminator('AdminUser', new mongoose.Schema({
     role: { type: String, required: true, default: 'admin' }
 }));
@@ -140,12 +150,7 @@ AdminUser.statics.toClassInstance = function (doc) {
     );
 };
 
-const CustomerUser = mongoose.model('CustomerUser', CustomerUserSchema);
-const Product = mongoose.model('Product', ProductSchema);
-const Category = mongoose.model('Category', CategorySchema);
-const Sale = mongoose.model('Sale', SaleSchema);
-const Cart = mongoose.model('Cart', CartSchema);
-
+// Exportaciones
 module.exports = {
     Category,
     CartItemSchema,
@@ -157,3 +162,4 @@ module.exports = {
     AdminUser,
     Product
 };
+
