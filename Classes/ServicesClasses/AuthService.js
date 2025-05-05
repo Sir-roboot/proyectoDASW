@@ -1,5 +1,5 @@
 const Service = require("../AbstractClasses/Service");
-const User = require("../models/User"); // Modelo de usuario
+const { CustomerUser: User } = require('../../Models/models'); // Modelo de usuario
 const bcrypt = require("bcryptjs"); // Para encriptar las contraseñas
 const jwt = require("jsonwebtoken"); // Para generar tokens
 

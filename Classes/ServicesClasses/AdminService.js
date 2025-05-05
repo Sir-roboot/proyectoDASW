@@ -1,5 +1,5 @@
 const Service = require("../AbstractClasses/Service");
-const { AdminUser, Product } = require('../models'); // Importar el modelo AdminUser y otros modelos
+const { AdminUser, Product } = require('../../Models/models');
 
 class AdminService extends Service {
   
