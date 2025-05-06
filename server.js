@@ -13,6 +13,11 @@ app.use('/api', router);
 // Puerto del servidor
 const PORT = process.env.PORT || 3000;
 
+app.get('/', (req, res) => {
+  res.json({ status: 'ok', up: true });
+});
+
+
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en puerto ${PORT}`);
 });
