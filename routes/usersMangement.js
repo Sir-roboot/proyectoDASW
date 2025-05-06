@@ -2,7 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const UserManagementRoutes = require('./routesHandlers/UserManagementRoutes');
-const AuthMiddleware = require('../middlewares/AuthMiddleware');
+const AuthMiddleware = require('./middlewares/AuthMiddleware');
 
 // Solo administradores autenticados pueden gestionar usuarios
 router.use(AuthMiddleware.verifyToken);
