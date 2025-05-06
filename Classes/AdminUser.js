@@ -2,7 +2,9 @@ const CustomerUser = require("./CustomerUser");
 
 class AdminUser extends CustomerUser {
     #role;
+    #idAdmin;
     /**
+     * @param {number} idAdmin
      * @param {number} idUser
      * @param {string} userName
      * @param {string} email
@@ -14,8 +16,9 @@ class AdminUser extends CustomerUser {
      * @param {Adress} address
      * @param {string} role
      */
-    constructor(idUser, name, userName, email, password, registerDate, cart, purchaseHistory, address, role) {
+    constructor(idAdmin, idUser, name, userName, email, password, registerDate, cart, purchaseHistory, address, role) {
         super(idUser, name, userName, email, password, registerDate, cart, purchaseHistory, address, cart);
+        this.idAdmin = idAdmin;
         this.role = role;
     }
 
@@ -27,10 +30,19 @@ class AdminUser extends CustomerUser {
         this.#role = role;
     }
 
+    get idAdmin() {
+        return this.#idAdmin;
+    }
+
+    set idAdmin(idAdmin) {
+        this.#idAdmin = idAdmin;
+    }
+
     classToObjectForMongo() {
         return {
-            ...super.classToObjectForMongo(),
+            idAdmin: this.idAdmin,
             role: this.role,
+            customerRef: this.idUser,
             userType: 'AdminUser'
         };
     }

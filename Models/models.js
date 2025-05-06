@@ -132,42 +132,53 @@ const Cart = mongoose.model('Cart', CartSchema);
 const Sale = mongoose.model('Sale', SaleSchema);
 const Product = mongoose.model('Product', ProductSchema);
 
-// Declaración de CustomerUser debe ir antes de AdminUser
+
 const CustomerUser = mongoose.model('CustomerUser', CustomerUserSchema);
 
+// Esquema independiente para AdminUser
 const AdminUserSchema = new mongoose.Schema({
-    role: { type: String, required: true, default: 'admin' }
-});
-
-let AdminUser;
-if (mongoose.models.AdminUser) {
-  AdminUser = mongoose.models.AdminUser;
-} else {
-  AdminUser = CustomerUser.discriminator('AdminUser', AdminUserSchema);
-}
-
-AdminUser.statics.toClassInstance = function (doc) {
-    const cartInstance = CartSchema.statics.toClassInstance(doc.cart);
-    const saleInstances = doc.sales.map(sale => SaleSchema.statics.toClassInstance(sale));
-    const addressInstance = AddressSchema.statics.toClassInstance(doc.address);
+    role: { type: String, required: true, default: 'admin' },
+    customerRef: { type: mongoose.Schema.Types.ObjectId, ref: 'CustomerUser' }
+  });
+  
+  // Método para convertir a instancia de tu clase AdminUserClass
+AdminUserSchema.statics.toClassInstance = async function(doc) {
+    // 1) Traer el documento CustomerUser
+    const customerDoc = await CustomerUser.findById(doc.customerRef).exec();
+    if (!customerDoc) {
+        throw new Error(`CustomerUser con id ${doc.customerRef} no encontrado`);
+    }
+  
+    // 2) Convertirlo a tu clase
+    const customerInstance = CustomerUser.schema.statics.toClassInstance(customerDoc);
+  
+    // 3) Crear el AdminUserClass con todos los campos
     return new AdminUserClass(
-        doc._id.toString(), doc.name, doc.email, doc.password,
-        cartInstance, saleInstances, addressInstance, doc.role
+        doc._id.toString(),               // idAdmin
+        customerInstance.id,              // idUser (usamos el id de CustomerUserClass)
+        customerInstance.name,            // name
+        customerInstance.userName,        // userName
+        customerInstance.email,           // email
+        customerInstance.password,        // password
+        customerInstance.registerDate,    // registerDate (campo de tu clase CustomerUserClass)
+        customerInstance.cart,            // cart
+        customerInstance.purchaseHistory, // purchaseHistory (lista de Sale)
+        customerInstance.address,         // address
+        doc.role                          // role (propio de AdminUser)
     );
 };
+  
+  const AdminUser = mongoose.model('AdminUser', AdminUserSchema);
 
-
-
-// Exportaciones
+// Exportaciones finales
 module.exports = {
-    Category,
-    CartItemSchema,
-    Cart,
-    ProductSaleSchema,
-    Sale,
-    AddressSchema,
-    CustomerUser,
-    AdminUser,
-    Product
+  Category,
+  CartItemSchema,
+  Cart,
+  ProductSaleSchema,
+  Sale,
+  AddressSchema,
+  CustomerUser,
+  AdminUser,
+  Product
 };
-
