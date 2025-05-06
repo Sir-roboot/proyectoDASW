@@ -135,20 +135,28 @@ const Product = mongoose.model('Product', ProductSchema);
 // Declaración de CustomerUser debe ir antes de AdminUser
 const CustomerUser = mongoose.model('CustomerUser', CustomerUserSchema);
 
-// Ahora sí puedes usar CustomerUser para declarar AdminUser
-const AdminUser = CustomerUser.discriminator('AdminUser', new mongoose.Schema({
+const AdminUserSchema = new mongoose.Schema({
     role: { type: String, required: true, default: 'admin' }
-}));
+});
 
-AdminUser.statics.toClassInstance = function (doc) {
-    const cartInstance = CartSchema.statics.toClassInstance(doc.cart);
-    const saleInstances = doc.sales.map(sale => SaleSchema.statics.toClassInstance(sale));
-    const addressInstance = AddressSchema.statics.toClassInstance(doc.address);
-    return new AdminUserClass(
-        doc._id.toString(), doc.name, doc.email, doc.password,
-        cartInstance, saleInstances, addressInstance, doc.role
-    );
-};
+let AdminUser;
+
+try {
+    AdminUser = CustomerUser.discriminator('AdminUser', AdminUserSchema);
+
+    AdminUser.statics.toClassInstance = function (doc) {
+        const cartInstance = CartSchema.statics.toClassInstance(doc.cart);
+        const saleInstances = doc.sales.map(sale => SaleSchema.statics.toClassInstance(sale));
+        const addressInstance = AddressSchema.statics.toClassInstance(doc.address);
+        return new AdminUserClass(
+            doc._id.toString(), doc.name, doc.email, doc.password,
+            cartInstance, saleInstances, addressInstance, doc.role
+        );
+    };
+} catch (err) {
+    console.error("Error al declarar AdminUser:", err);
+}
+
 
 // Exportaciones
 module.exports = {
