@@ -139,7 +139,12 @@ const AdminUserSchema = new mongoose.Schema({
     role: { type: String, required: true, default: 'admin' }
 });
 
-const AdminUser = mongoose.models.AdminUser || CustomerUser.discriminator('AdminUser', AdminUserSchema);
+let AdminUser;
+if (mongoose.models.AdminUser) {
+  AdminUser = mongoose.models.AdminUser;
+} else {
+  AdminUser = CustomerUser.discriminator('AdminUser', AdminUserSchema);
+}
 
 AdminUser.statics.toClassInstance = function (doc) {
     const cartInstance = CartSchema.statics.toClassInstance(doc.cart);
