@@ -139,23 +139,18 @@ const AdminUserSchema = new mongoose.Schema({
     role: { type: String, required: true, default: 'admin' }
 });
 
-let AdminUser;
+const AdminUser = mongoose.models.AdminUser || CustomerUser.discriminator('AdminUser', AdminUserSchema);
 
-try {
-    AdminUser = CustomerUser.discriminator('AdminUser', AdminUserSchema);
+AdminUser.statics.toClassInstance = function (doc) {
+    const cartInstance = CartSchema.statics.toClassInstance(doc.cart);
+    const saleInstances = doc.sales.map(sale => SaleSchema.statics.toClassInstance(sale));
+    const addressInstance = AddressSchema.statics.toClassInstance(doc.address);
+    return new AdminUserClass(
+        doc._id.toString(), doc.name, doc.email, doc.password,
+        cartInstance, saleInstances, addressInstance, doc.role
+    );
+};
 
-    AdminUser.statics.toClassInstance = function (doc) {
-        const cartInstance = CartSchema.statics.toClassInstance(doc.cart);
-        const saleInstances = doc.sales.map(sale => SaleSchema.statics.toClassInstance(sale));
-        const addressInstance = AddressSchema.statics.toClassInstance(doc.address);
-        return new AdminUserClass(
-            doc._id.toString(), doc.name, doc.email, doc.password,
-            cartInstance, saleInstances, addressInstance, doc.role
-        );
-    };
-} catch (err) {
-    console.error("Error al declarar AdminUser:", err);
-}
 
 
 // Exportaciones

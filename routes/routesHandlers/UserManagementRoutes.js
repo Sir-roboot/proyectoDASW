@@ -1,4 +1,4 @@
-const AdminService = require('../services/AdminService');
+const AdminService = require('../../Classes/ServicesClasses/AdminService');
 
 class UserManagementRoutes {
     static async getUsers(req, res) {
