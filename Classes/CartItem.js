@@ -1,55 +1,99 @@
 const Product = require("./AbstractClasses/Product");
 
 class CartItem {
-	#idCartItem;
-	#product;
+    #idCartItem;
+    #product;
     #amountToBuy;
     #priceTotal;
-  
+
     /**
-    * @param {string} idCartItem
-    * @param {Product} product
-    * @param {number} amountToBuy
-    */
+     * @param {string} idCartItem
+     * @param {Product} product
+     * @param {number} amountToBuy
+     */
     constructor(idCartItem, product, amountToBuy) {
-    	this.#idCartItem = idCartItem;
-    	this.#product = product;
-    	this.#amountToBuy = amountToBuy;
-    	this.#priceTotal = this.product.price * amountToBuy;
+        this.idCartItem = idCartItem;
+        this.product = product;
+        this.amountToBuy = amountToBuy;
+        this.#priceTotal = this.#product.price * this.#amountToBuy;
     }
-  
+
     get idCartItem() {
-    	return this.#idCartItem;
+        return this.#idCartItem;
     }
-  
+
+    set idCartItem(value) {
+        if (typeof value !== 'string' || !value.trim()) {
+            throw new TypeError("idCartItem debe ser un string no vacío.");
+        }
+        this.#idCartItem = value.trim();
+    }
+
     get product() {
-    	return this.#product;
+        return this.#product;
     }
-  
+
+    set product(value) {
+        if (!(value instanceof Product)) {
+            throw new TypeError("product debe ser una instancia de Product.");
+        }
+        this.#product = value;
+    }
+
     get amountToBuy() {
-    	return this.#amountToBuy;
+        return this.#amountToBuy;
     }
-  
+
     set amountToBuy(value) {
-    	if (value > 0) {
-    		this.#amountToBuy = value;
-    		this.priceTotal = this.product.price * value;
-    	}
+        if (typeof value !== 'number' || value <= 0 || isNaN(value)) {
+            throw new TypeError("amountToBuy debe ser un número mayor a 0.");
+        }
+        this.#amountToBuy = value;
+        this.#priceTotal = this.#product.price * value;
     }
-  
+
     get priceTotal() {
-    	return this.#priceTotal;
+        return this.#priceTotal;
     }
-  
+
+    /**
+     * Convierte la instancia a objeto plano para MongoDB.
+     */
     classToObjectForMongo() {
-    	return {
-    		_id: this.idCartItem,
-    		product: this.product.idProduct,
-    		amountToBuy: this.amountToBuy,
-    		priceTotal: this.priceTotal
-    	};
+        return {
+            _id: this.idCartItem,
+            product: this.product.idProduct,
+            amountToBuy: this.amountToBuy,
+            priceTotal: this.priceTotal
+        };
+    }
+
+    /**
+     * Crea una instancia de CartItem desde un objeto plano.
+     * @param {Object} obj
+     * @returns {CartItem}
+     */
+    static fromObject(obj) {
+        if (!obj || typeof obj !== 'object') {
+            throw new TypeError("fromObject espera un objeto válido.");
+        }
+
+        const { _id, product, amountToBuy } = obj;
+
+        if (!_id || !product || typeof amountToBuy !== 'number') {
+            throw new Error("Faltan campos obligatorios para crear un CartItem.");
+        }
+
+        const productInstance = product instanceof Product
+            ? product
+            : Product.fromObject(product); // <- asegúrate de tener este método
+
+        return new CartItem(
+            _id.toString(),
+            productInstance,
+            amountToBuy
+        );
     }
 }
-  
+
 module.exports = CartItem;
-  

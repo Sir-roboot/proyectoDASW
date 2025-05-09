@@ -1,33 +1,31 @@
 const CustomerUser = require("./CustomerUser");
+const Cart = require("./Cart");
+const Sale = require("./Sale");
+const Address = require("./Address");
 
 class AdminUser extends CustomerUser {
-    #role;
     #idAdmin;
+
     /**
-     * @param {number} idAdmin
-     * @param {number} idUser
+     * @param {string} idAdmin - ID único del administrador
+     * @param {string} idUser - ID del usuario base (CustomerUser)
+     * @param {string} name
      * @param {string} userName
      * @param {string} email
      * @param {string} password
-     * @param {string} name
      * @param {Date} registerDate
-     * @param {Cart} cart
-     * @param {List<Sale>} purchaseHistory
-     * @param {Adress} address
-     * @param {string} role
+     * @param {string} role - Debe ser 'admin'
+     * @param {Cart|null} cart
+     * @param {Sale[]} purchaseHistory
+     * @param {Address|null} address
      */
-    constructor(idAdmin, idUser, name, userName, email, password, registerDate, cart, purchaseHistory, address, role) {
-        super(idUser, name, userName, email, password, registerDate, cart, purchaseHistory, address, cart);
+    constructor(idAdmin, idUser, name, userName, email, password, registerDate, role, cart, purchaseHistory, address) {
+        if (role !== 'admin') {
+            throw new TypeError("El rol de un AdminUser debe ser 'admin'.");
+        }
+
+        super(idUser, name, userName, email, password, registerDate, role, cart, purchaseHistory, address);
         this.idAdmin = idAdmin;
-        this.role = role;
-    }
-
-    get role() {
-        return this.#role;
-    }
-
-    set role(role) {
-        this.#role = role;
     }
 
     get idAdmin() {
@@ -35,15 +33,58 @@ class AdminUser extends CustomerUser {
     }
 
     set idAdmin(idAdmin) {
-        this.#idAdmin = idAdmin;
+        if (typeof idAdmin !== 'string' || !idAdmin.trim()) {
+            throw new TypeError("idAdmin debe ser un string no vacío.");
+        }
+        this.#idAdmin = idAdmin.trim();
     }
 
+    /**
+     * Convierte una representación de objeto plano a una instancia de AdminUser.
+     * @param {object} obj
+     * @returns {AdminUser}
+     */
+    static fromObject(obj) {
+        if (!obj || typeof obj !== 'object') {
+            throw new TypeError("fromObject espera un objeto válido.");
+        }
+
+        const {
+            _id,               // id del admin (idAdmin)
+            customerRef        // debe ser un objeto con todos los datos del usuario base
+        } = obj;
+
+        if (!customerRef) {
+            throw new Error("Falta el campo 'customerRef' en el documento del admin.");
+        }
+
+        const customerInstance = customerRef instanceof CustomerUser
+            ? customerRef
+            : CustomerUser.fromObject(customerRef);
+
+        return new AdminUser(
+            _id?.toString(),
+            customerInstance.idUser,
+            customerInstance.name,
+            customerInstance.userName,
+            customerInstance.email,
+            customerInstance.password,
+            customerInstance.registerDate,
+            customerInstance.role,
+            customerInstance.cart,
+            customerInstance.purchaseHistory,
+            customerInstance.address
+        );
+    }
+
+    /**
+     * Convierte la instancia de AdminUser en un objeto plano listo para guardar en MongoDB.
+     * @returns {Object}
+     */
     classToObjectForMongo() {
         return {
-            idAdmin: this.idAdmin,
-            role: this.role,
-            customerRef: this.idUser,
-            userType: 'AdminUser'
+            _id: this.idAdmin,
+            customerRef: this.idUser
         };
     }
 }

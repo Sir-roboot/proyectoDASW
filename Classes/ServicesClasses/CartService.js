@@ -5,17 +5,13 @@ class CartService extends Service {
      * Obtiene el carrito de un usuario dado su ID.
      * @param {string} userId - ID del usuario (Mongo _id).
      * @param {Mongoose.Model} userModel - Modelo de Mongoose del usuario.
+     * @param {typeof Service} ServiceClass - Modelo de Mongoose del usuario.
      * @returns {Promise<CartClass|null>} Instancia de CartClass o null.
      */
-    static async getCart(userId, userModel) {
-        const user = await this.getSelectAndPopulate(
-            userModel,
-            userId,
-            'cart',
-            ['cart.items.product', 'cart.items.product.category'],
-            ['', 'name description']
-        );
-        return user ? user.cart : null;
+    static async getCart(userId, userModel, cartModel, ServiceClass) {
+        const doc = await userModel.findById(userId).select('cart').lean();
+        const cart  = await ServiceClass.getPopulate(cartModel, doc.cart, 'items.product');
+        return cart;
     }
 
     /**
@@ -144,16 +140,60 @@ class CartService extends Service {
      * @param {Mongoose.Model} cartModel
      * @param {typeof import("../Classes/Cart")} CartClass
      */
-    static async emptyCart(userId, userModel, cartModel, CartClass) {
-        const cartInstance = await this.getCart(userId, userModel);
+    static async emptyCart(userId, userModel, cartModel, ServiceClass) {
+        const cartInstance = await CartService.getCart(userId, userModel, cartModel, ServiceClass);
         if (!cartInstance) throw new Error('Carrito no encontrado');
 
-        const empty = new CartClass(cartInstance.idCart, [], 0, 'empty');
+        const empty = 
         return await this.updateData(
             cartModel,
             cartInstance.idCart,
             empty.classToObjectForMongo()
         );
+    }
+
+    /**
+     * Realiza la compra de todos los elementos del carrito del usuario.
+     * @param {string} idUser - ID del usuario.
+     * @param {Mongoose.Model} userModel - Modelo de usuario.
+     * @param {Mongoose.Model} cartModel - Modelo de carrito.
+     * @param {Mongoose.Model} saleModel - Modelo de venta.
+     * @param {Function} methodGetCart - Función que retorna instancia CartClass.
+     * @param {Function} methodEmptyCart - Función para vaciar el carrito.
+     * @param {Function} methodCreateSale - Función para crear la venta.
+     * @param {Function} methodAddSaleToUser - Función para añadir la venta al usuario.
+     * @param {typeof Sale} SaleClass - Clase Sale.
+     * @param {typeof ProductSale} ProductSaleClass - Clase ProductSale.
+     * @returns {Promise<any>} Resultado de emptyCart o información de la venta.
+     */
+    static async purchase(
+        idUser,
+        userModel,
+        cartModel,
+        saleModel,
+        methodGetCart,
+        methodEmptyCart,
+        methodCreateSale,
+        methodAddSaleToUser,
+        SaleClass,
+        ProductSaleClass
+    ) {
+
+        const cartInstance = await methodGetCart(idUser, userModel, cartModel);
+        if (!cartInstance || cartInstance.isEmpty()) {
+            throw new Error("Tu carrito está vacío");
+        }
+        // Crear venta a partir del carrito
+        const saleInstance = await methodCreateSale(
+            saleModel,
+            SaleClass,
+            ProductSaleClass,
+            cartInstance
+        );
+        // Agregar venta al historial del usuario
+        await methodAddSaleToUser(idUser, saleInstance.idSale, userModel);
+        // Vaciar el carrito y retornar el resultado
+        return await methodEmptyCart(idUser, userModel, cartModel);
     }
 }
 

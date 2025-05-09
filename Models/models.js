@@ -1,3 +1,4 @@
+// 📦 Imports
 const mongoose = require('mongoose');
 
 const CategoryClass = require('../Classes/Category');
@@ -10,15 +11,11 @@ const CustomerUserClass = require('../Classes/CustomerUser');
 const AdminUserClass = require('../Classes/AdminUser');
 const ProductClass = require('../Classes/AbstractClasses/Product');
 
-// Esquemas
+// 🧱 Esquemas
 const CategorySchema = new mongoose.Schema({
     name: { type: String, required: true },
     description: { type: String }
 });
-
-CategorySchema.statics.toClassInstance = function (doc) {
-    return new CategoryClass(doc._id.toString(), doc.name, doc.description);
-};
 
 const CartItemSchema = new mongoose.Schema({
     product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
@@ -26,21 +23,11 @@ const CartItemSchema = new mongoose.Schema({
     priceTotal: { type: Number, required: true }
 });
 
-CartItemSchema.statics.toClassInstance = function (doc) {
-    const productInstance = ProductSchema.statics.toClassInstance(doc.product);
-    return new CartItemClass(doc._id.toString(), productInstance, doc.amountToBuy);
-};
-
 const CartSchema = new mongoose.Schema({
     items: { type: [CartItemSchema], default: [] },
     total: { type: Number, required: true, default: 0 },
     status: { type: String, required: true }
 });
-
-CartSchema.statics.toClassInstance = function (doc) {
-    const items = doc.items.map(item => CartItemSchema.statics.toClassInstance(item));
-    return new CartClass(doc._id.toString(), items, doc.total, doc.status);
-};
 
 const ProductSaleSchema = new mongoose.Schema({
     idProduct: { type: String, required: true },
@@ -51,17 +38,13 @@ const ProductSaleSchema = new mongoose.Schema({
     capacity: { type: String },
     waterproof: { type: Boolean },
     image: { type: String },
-    category: { type: String },
+    category: {
+        name: { type: String, required: true },
+        description: { type: String }
+    },
     amountBought: { type: Number, required: true },
     priceTotal: { type: Number, required: true }
 }, { _id: false });
-
-ProductSaleSchema.statics.toClassInstance = function (doc) {
-    return new ProductSaleClass(
-        doc.idProduct, doc.name, doc.brand, doc.price, doc.stock, doc.capacity,
-        doc.waterproof, doc.image, doc.category, doc.amountBought, doc.priceTotal
-    );
-};
 
 const ProductSchema = new mongoose.Schema({
     name: { type: String, required: true },
@@ -74,25 +57,12 @@ const ProductSchema = new mongoose.Schema({
     category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category' }
 });
 
-ProductSchema.statics.toClassInstance = function (doc) {
-    const categoryInstance = CategorySchema.statics.toClassInstance(doc.category);
-    return new ProductClass(
-        doc._id.toString(), doc.name, doc.brand, doc.price,
-        doc.stock, doc.capacity, doc.waterproof, doc.image, categoryInstance
-    );
-};
-
 const SaleSchema = new mongoose.Schema({
     products: { type: [ProductSaleSchema], required: true },
     total: { type: Number, required: true },
     date: { type: Date, required: true, default: Date.now },
     status: { type: String, required: true }
 });
-
-SaleSchema.statics.toClassInstance = function (doc) {
-    const products = doc.products.map(prod => ProductSaleSchema.statics.toClassInstance(prod));
-    return new SaleClass(doc._id.toString(), products, doc.total, doc.date, doc.status);
-};
 
 const AddressSchema = new mongoose.Schema({
     street: { type: String, required: true },
@@ -102,83 +72,119 @@ const AddressSchema = new mongoose.Schema({
     country: { type: String, required: true }
 });
 
-AddressSchema.statics.toClassInstance = function (doc) {
-    return new AddressClass(doc.street, doc.city, doc.state, doc.zipCode, doc.country);
-};
-
 const CustomerUserSchema = new mongoose.Schema({
     name: { type: String, required: true },
-    userName: { type: String, required: true },
+    userName: { type: String, required: true, unique: true },
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
+    date: { type: Date, required: true, default: Date.now },
+    role: { type: String, required: true, default: 'customer' },
     cart: { type: mongoose.Schema.Types.ObjectId, ref: 'Cart' },
     sales: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Sale' }],
     address: { type: AddressSchema }
-}, { discriminatorKey: 'userType' });
+});
+
+const AdminUserSchema = new mongoose.Schema({
+    customerRef: { type: mongoose.Schema.Types.ObjectId, ref: 'CustomerUser' }
+});
+
+// 🧠 Métodos estáticos
+CategorySchema.statics.toClassInstance = function (doc) {
+    return CategoryClass.fromObject(doc);
+};
+
+CartSchema.statics.toClassInstance = function (doc) {
+    return CartClass.fromObject(doc);
+};
+
+SaleSchema.statics.toClassInstance = function (doc) {
+    return SaleClass.fromObject(doc);
+};
+
+AddressSchema.statics.toClassInstance = function (doc) {
+    return AddressClass.fromObject(doc);
+};
 
 CustomerUserSchema.statics.toClassInstance = function (doc) {
-    const cartInstance = CartSchema.statics.toClassInstance(doc.cart);
-    const saleInstances = doc.sales.map(sale => SaleSchema.statics.toClassInstance(sale));
-    const addressInstance = AddressSchema.statics.toClassInstance(doc.address);
-    return new CustomerUserClass(
-        doc._id.toString(), doc.name, doc.userName, doc.email, doc.password,
-        cartInstance, saleInstances, addressInstance
+    return CustomerUserClass.fromObject(doc);
+};
+
+ProductSaleSchema.statics.toClassInstance = function (doc) {
+    return ProductSaleClass.fromObject(doc);
+};
+
+ProductSchema.statics.toClassInstance = function (doc) {
+    const categoryInstance = CategorySchema.statics.toClassInstance(doc.category);
+    return new ProductClass(
+        doc._id.toString(), doc.name, doc.brand, doc.price,
+        doc.stock, doc.capacity, doc.waterproof, doc.image, categoryInstance
     );
 };
 
-// Declaraciones de modelos principales
-const Category = mongoose.model('Category', CategorySchema);
-const Cart = mongoose.model('Cart', CartSchema);
-const Sale = mongoose.model('Sale', SaleSchema);
-const Product = mongoose.model('Product', ProductSchema);
+CartItemSchema.statics.toClassInstance = function (doc) {
+    const productInstance = ProductSchema.statics.toClassInstance(doc.product);
+    return new CartItemClass(doc._id.toString(), productInstance, doc.amountToBuy);
+};
 
+CartSchema.statics.getNewId = function () {
+    return new mongoose.Types.ObjectId();
+};
 
-const CustomerUser = mongoose.model('CustomerUser', CustomerUserSchema);
+ProductSchema.statics.getNewId = function () {
+    return new mongoose.Types.ObjectId();
+};
 
-// Esquema independiente para AdminUser
-const AdminUserSchema = new mongoose.Schema({
-    role: { type: String, required: true, default: 'admin' },
-    customerRef: { type: mongoose.Schema.Types.ObjectId, ref: 'CustomerUser' }
-  });
-  
-  // Método para convertir a instancia de tu clase AdminUserClass
+SaleSchema.statics.getNewId = function () {
+    return new mongoose.Types.ObjectId();
+};
+
+CustomerUserSchema.statics.getNewId = function () {
+    return new mongoose.Types.ObjectId();
+};
+
+AdminUserSchema.statics.getNewId = function () {
+    return new mongoose.Types.ObjectId();
+};
+
 AdminUserSchema.statics.toClassInstance = async function(doc) {
-    // 1) Traer el documento CustomerUser
     const customerDoc = await CustomerUser.findById(doc.customerRef).exec();
     if (!customerDoc) {
         throw new Error(`CustomerUser con id ${doc.customerRef} no encontrado`);
     }
-  
-    // 2) Convertirlo a tu clase
     const customerInstance = CustomerUser.schema.statics.toClassInstance(customerDoc);
-  
-    // 3) Crear el AdminUserClass con todos los campos
+
     return new AdminUserClass(
-        doc._id.toString(),               // idAdmin
-        customerInstance.id,              // idUser (usamos el id de CustomerUserClass)
-        customerInstance.name,            // name
-        customerInstance.userName,        // userName
-        customerInstance.email,           // email
-        customerInstance.password,        // password
-        customerInstance.registerDate,    // registerDate (campo de tu clase CustomerUserClass)
-        customerInstance.cart,            // cart
-        customerInstance.purchaseHistory, // purchaseHistory (lista de Sale)
-        customerInstance.address,         // address
-        doc.role                          // role (propio de AdminUser)
+        doc._id.toString(),
+        customerInstance.idUser,
+        customerInstance.name,
+        customerInstance.userName,
+        customerInstance.email,
+        customerInstance.password,
+        customerInstance.registerDate,
+        customerInstance.role,
+        customerInstance.cart,
+        customerInstance.purchaseHistory,
+        customerInstance.address
     );
 };
-  
-  const AdminUser = mongoose.model('AdminUser', AdminUserSchema);
 
-// Exportaciones finales
+// 🏷️ Modelos principales
+const Category = mongoose.model('Category', CategorySchema);
+const Cart = mongoose.model('Cart', CartSchema);
+const Sale = mongoose.model('Sale', SaleSchema);
+const Product = mongoose.model('Product', ProductSchema);
+const CustomerUser = mongoose.model('CustomerUser', CustomerUserSchema);
+const AdminUser = mongoose.model('AdminUser', AdminUserSchema);
+
+// 📤 Exportaciones
 module.exports = {
-  Category,
-  CartItemSchema,
-  Cart,
-  ProductSaleSchema,
-  Sale,
-  AddressSchema,
-  CustomerUser,
-  AdminUser,
-  Product
+    Category,
+    CartItemSchema,
+    Cart,
+    ProductSaleSchema,
+    Sale,
+    AddressSchema,
+    CustomerUser,
+    AdminUser,
+    Product
 };

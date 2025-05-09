@@ -14,7 +14,7 @@ class SaleService extends Service {
         const saleInstance = new Sale(
             cartInstance.idCart,
             cartInstance.items.map(cartItem => {
-                const product = cartItem.product;
+                let product = cartItem.product;
                 return new ProductSale(
                     product.idProduct,
                     product.name,

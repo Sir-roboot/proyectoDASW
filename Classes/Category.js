@@ -1,15 +1,14 @@
-
 class Category {
     #idCategory;
     #name;
     #description;
+
     /**
-     * @param {number} idCategory
+     * @param {string} idCategory
      * @param {string} name
      * @param {string} description
      */
-
-    constructor(idCategory,name, description) {
+    constructor(idCategory, name, description) {
         this.idCategory = idCategory;
         this.name = name;
         this.description = description;
@@ -20,7 +19,10 @@ class Category {
     }
 
     set idCategory(idCategory) {
-        this.#idCategory = idCategory;
+        if (typeof idCategory !== 'string' || !idCategory.trim()) {
+            throw new TypeError("idCategory debe ser un string no vacío.");
+        }
+        this.#idCategory = idCategory.trim();
     }
 
     get name() {
@@ -28,23 +30,49 @@ class Category {
     }
 
     set name(name) {
-        this.#name = name;
+        if (typeof name !== 'string' || !name.trim()) {
+            throw new TypeError("name debe ser un string no vacío.");
+        }
+        this.#name = name.trim();
     }
 
     get description() {
         return this.#description;
     }
 
-    set description(description){ 
-        this.#description = description;
+    set description(description) {
+        if (description !== undefined && typeof description !== 'string') {
+            throw new TypeError("description debe ser un string si se proporciona.");
+        }
+        this.#description = description?.trim() || '';
     }
 
     classToObjectForMongo() {
         return {
-            _id: this.idCategory, 
+            _id: this.idCategory,
             name: this.name,
             description: this.description
+        };
+    }
+
+    /**
+     * Crea una instancia de Category desde un objeto plano.
+     * @param {Object} obj
+     * @returns {Category}
+     */
+    static fromObject(obj) {
+        if (!obj || typeof obj !== 'object') {
+            throw new TypeError("fromObject espera un objeto válido.");
         }
+
+        const { _id, name, description } = obj;
+
+        if (!name) {
+            throw new Error("Falta el campo 'name' para crear una categoría.");
+        }
+
+        return new Category(_id?.toString() || 'temp-id', name, description);
     }
 }
+
 module.exports = Category;

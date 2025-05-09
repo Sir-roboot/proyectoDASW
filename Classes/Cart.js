@@ -6,20 +6,20 @@ class Cart {
     #items;
     #status;
 
-    /**
-     * @param {string} idCart
-     * @param {Array<CartItem>} items
-     * @param {number} total
-     * @param {string} status
-     */
-    constructor(idCart, items, total, status) {
+    static EMPTY = 'empty';
+    static HAS_ITEMS = 'hasItems';
+
+    constructor(idCart, items, total) {
         this.idCart = idCart;
-        this.status = status;
+        this.status = Cart.EMPTY;
         this.total = total;
         this.items = items || [];
     }
 
     set idCart(idCart) {
+        if (typeof idCart !== 'string' || !idCart.trim()) {
+            throw new TypeError("idCart debe ser un string no vacío.");
+        }
         this.#idCart = idCart;
     }
 
@@ -28,6 +28,9 @@ class Cart {
     }
 
     set total(total) {
+        if (typeof total !== 'number' || isNaN(total) || total < 0) {
+            throw new TypeError("total debe ser un número mayor o igual a 0.");
+        }
         this.#total = total;
     }
 
@@ -36,6 +39,9 @@ class Cart {
     }
 
     set status(status) {
+        if (![Cart.EMPTY, Cart.HAS_ITEMS].includes(status)) {
+            throw new TypeError(`status debe ser '${Cart.EMPTY}' o '${Cart.HAS_ITEMS}'.`);
+        }
         this.#status = status;
     }
 
@@ -44,36 +50,47 @@ class Cart {
     }
 
     set items(items) {
+        if (!Array.isArray(items)) {
+            throw new TypeError("items debe ser un arreglo.");
+        }
+        for (const item of items) {
+            if (!(item instanceof CartItem)) {
+                throw new TypeError("Todos los elementos de items deben ser instancias de CartItem.");
+            }
+        }
         this.#items = items;
     }
 
     get items() {
         return this.#items;
     }
-    
+
     isEmpty() {
         return !this.items.length;
     }
 
-    /**
-     * Agrega un CartItem al carrito.
-     * @param {CartItem} cartItem - Instancia de CartItem a agregar.
-     */
     addItem(cartItem) {
+        if (!(cartItem instanceof CartItem)) {
+            throw new TypeError("cartItem debe ser una instancia de CartItem.");
+        }
+
+        if (this.status === Cart.EMPTY) {
+            this.status = Cart.HAS_ITEMS;
+        }
+
         this.#items.push(cartItem);
         this.#total += cartItem.priceTotal;
     }
 
-    /**
-     * Elimina un CartItem del carrito basado en el id del producto.
-     * @param {string} idProduct - ID del producto que quieres eliminar del carrito.
-     */
     removeItem(idProduct) {
-        const index = this.#items.findIndex(item => item.product.idProduct === idProduct);
+        const index = this.items.findIndex(cartItem => cartItem.product.idProduct === idProduct);
         if (index !== -1) {
-            const removedItem = this.#items.splice(index, 1)[0]; // eliminar el item
-            this.#total -= removedItem.priceTotal; // descontar el precio del total
+            const removedItem = this.items.splice(index, 1)[0];
+            this.#total = Math.max(0, this.#total - removedItem.priceTotal);
+            this.status = this.isEmpty() ? Cart.EMPTY : Cart.HAS_ITEMS;
+            return true;
         }
+        return false;
     }
 
     calculateNewTotal() {
@@ -81,10 +98,15 @@ class Cart {
         this.total = total;
     }
 
-    /**
-     * Convierte el carrito a un objeto listo para guardar en MongoDB.
-     * @returns {Object} Objeto plano para MongoDB.
-     */
+    clearOutCart() {
+        if (this.status === Cart.EMPTY) {
+            throw new Error("El carrito ya está vacío.");
+        }
+        this.items = [];
+        this.total = 0;
+        this.status = Cart.EMPTY;
+    }
+
     classToObjectForMongo() {
         return {
             _id: this.idCart,
@@ -92,6 +114,41 @@ class Cart {
             total: this.total,
             status: this.status,
         };
+    }
+
+    /**
+     * Crea una instancia de Cart desde un objeto plano.
+     * @param {Object} obj
+     * @returns {Cart}
+     */
+    static fromObject(obj) {
+        if (!obj || typeof obj !== 'object') {
+            throw new TypeError("fromObject espera un objeto válido.");
+        }
+
+        const { _id, items, total, status } = obj;
+
+        if (!Array.isArray(items) || typeof total !== 'number') {
+            throw new Error("items debe ser un arreglo y total un número válido.");
+        }
+
+        const itemInstances = items.map(item =>
+            item instanceof CartItem ? item : CartItem.fromObject(item)
+        );
+
+        const cart = new Cart(
+            _id?.toString() || 'temp-id',
+            itemInstances,
+            total
+        );
+
+        if (status && [Cart.EMPTY, Cart.HAS_ITEMS].includes(status)) {
+            cart.status = status;
+        } else {
+            cart.status = cart.isEmpty() ? Cart.EMPTY : Cart.HAS_ITEMS;
+        }
+
+        return cart;
     }
 }
 

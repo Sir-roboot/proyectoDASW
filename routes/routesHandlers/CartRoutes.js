@@ -1,4 +1,6 @@
 const CartService = require('../../Classes/ServicesClasses/CartService');
+const Service = require("../../Classes/AbstractClasses/Service");
+const { CustomerUser : User, Cart } = require("../../Models/models.js");
 
 class CartRoutes {
     
@@ -34,6 +36,19 @@ class CartRoutes {
     static async removeCartItem(req, res) {
         try {
             const result = await CartService.removeCartItem(req.params.userId, req.params.productId);
+            res.status(200).json(result);
+        } catch (err) {
+            res.status(500).json({ success: false, error: err.message });
+        }
+    }
+
+    static async purchesCart(req, res) {
+        try {
+            const result = await CartService.purchase(req.userId, User, Cart,, 
+                async () => CartService.getCart(req.userId, User, Cart, Service),
+                async () => CartService.emptyCart(req.userId, User, Cart,),
+                async () =>  
+            );
             res.status(200).json(result);
         } catch (err) {
             res.status(500).json({ success: false, error: err.message });

@@ -1,4 +1,3 @@
-
 class User {
     #idUser;
     #userName;
@@ -7,18 +6,19 @@ class User {
     #name;
     #registerDate;
     #address;
+
     /**
-     * @param {number} idUser
+     * @param {string} idUser
      * @param {string} userName
      * @param {string} email
      * @param {string} password
      * @param {string} name
      * @param {Date} registerDate
-     * @param {Adress} address
+     * @param {Address} address
      */
     constructor(idUser, userName, email, password, name, registerDate, address) {
-        if(this.constructor == BaseUser) {
-            throw new Error("You can not create an instance of this class directly");
+        if (this.constructor === User) {
+            throw new Error("No se puede instanciar directamente la clase abstracta User");
         }
         this.idUser = idUser;
         this.userName = userName;
@@ -34,7 +34,10 @@ class User {
     }
 
     set idUser(idUser) {
-        this.#idUser = idUser;
+        if (typeof idUser !== 'string' || !idUser.trim()) {
+            throw new TypeError("idUser debe ser un string no vacío.");
+        }
+        this.#idUser = idUser.trim();
     }
 
     get userName() {
@@ -42,7 +45,10 @@ class User {
     }
 
     set userName(userName) {
-        this.#userName = userName;
+        if (typeof userName !== 'string' || !userName.trim()) {
+            throw new TypeError("userName debe ser un string no vacío.");
+        }
+        this.#userName = userName.trim();
     }
 
     get email() {
@@ -50,7 +56,10 @@ class User {
     }
 
     set email(email) {
-        this.#email = email;
+        if (typeof email !== 'string' || !email.includes('@')) {
+            throw new TypeError("email debe ser un string válido con '@'.");
+        }
+        this.#email = email.trim();
     }
 
     get password() {
@@ -58,6 +67,9 @@ class User {
     }
 
     set password(password) {
+        if (typeof password !== 'string' || password.length < 6) {
+            throw new TypeError("password debe ser un string con al menos 6 caracteres.");
+        }
         this.#password = password;
     }
 
@@ -66,7 +78,10 @@ class User {
     }
 
     set name(name) {
-        this.#name = name;
+        if (typeof name !== 'string' || !name.trim()) {
+            throw new TypeError("name debe ser un string no vacío.");
+        }
+        this.#name = name.trim();
     }
 
     get registerDate() {
@@ -74,6 +89,9 @@ class User {
     }
 
     set registerDate(registerDate) {
+        if (!(registerDate instanceof Date) || isNaN(registerDate)) {
+            throw new TypeError("registerDate debe ser una fecha válida.");
+        }
         this.#registerDate = registerDate;
     }
 
@@ -82,15 +100,11 @@ class User {
     }
 
     set address(address) {
+        // La validación puede mejorar si tienes una clase Address con verificación propia
+        if (typeof address !== 'object' || address === null) {
+            throw new TypeError("address debe ser un objeto Address válido.");
+        }
         this.#address = address;
-    }
-
-    static objectToClass(object) {
-        throw new Error("This method  must be declear");
-    }
-
-    classToObjectForMongo() {
-        throw new Error("This method  must be declear");
     }
 }
 

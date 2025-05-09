@@ -9,12 +9,12 @@ class AuthMiddleware {
             return res.status(401).json({ message: 'Token no proporcionado' });
         }
 
-        jwt.verify(token, process.env.JWT_SECRET || 'mysecretkey', (err, decoded) => {
+        jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
             if (err) {
                 return res.status(403).json({ message: 'Token inválido o expirado' });
             }
 
-            req.userId = decoded.userId;
+            req.userId = decoded.id;
             req.userRole = decoded.role;
             next();
         });

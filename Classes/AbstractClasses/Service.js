@@ -6,11 +6,6 @@ class Service {
         }
     }
   
-    static async getNewId(mongoose) {
-        const id = new mongoose.Types.ObjectId();
-        return id;
-    }
-  
     /**
      * Crea un nuevo documento en el modelo y devuelve instancia de clase.
      * @param {Mongoose.Model} model 
@@ -105,6 +100,30 @@ class Service {
         const doc = await model.findById(id).populate(populateFields).lean();
         return doc ? model.toClassInstance(doc) : null;
     }
+
+    /**
+     * 
+     * @param {Mongoose.Model} model 
+     * @param {Object} params 
+     * @returns 
+     */
+    static async findByParams(model, params = {}) {
+        const doc =  await model.findOne(params);
+        return doc? model.toClassInstance(doc) : null;
+    }
+
+    /**
+     * 
+     * @param {Mongoose.Model} model 
+     * @param {Object} params 
+     * @returns 
+     */
+    static async findMany(model, params = {}) {
+        const docList = await model.find(params);
+        const list  = docList.map(doc => model.toClassInstance(doc));
+        return list;
+    }
+
 }
   
 module.exports = Service;
