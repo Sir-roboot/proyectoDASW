@@ -41,16 +41,19 @@ class Service {
     }
   
     /**
-     * Actualiza un documento por ID con los datos dados y devuelve instancia de clase.
-     * @param {Mongoose.Model} model 
-     * @param {string} id 
-     * @param {Object} data 
-     * @returns {Promise<Object|null>} Instancia de clase
+     * Actualiza un documento por ID con los datos dados.
+     * Solo devuelve `true` si se actualizó correctamente, o `false` si no se encontró.
+     * 
+     * @param {Mongoose.Model} model - Modelo Mongoose.
+     * @param {string} id - ID del documento a actualizar.
+     * @param {Object} data - Datos a actualizar.
+     * @returns {Promise<boolean>} - `true` si se actualizó, `false` si no.
      */
     static async updateData(model, id, data) {
-        const updatedDoc = await model.findByIdAndUpdate(id, data, { new: true }).lean();
-        return updatedDoc ? model.toClassInstance(updatedDoc) : null;
+        const result = await model.findByIdAndUpdate(id, data);
+        return !!result; // true si se actualizó, false si no se encontró
     }
+
   
     /**
      * Obtiene un documento con campos específicos y devuelve instancia de clase.
@@ -63,7 +66,22 @@ class Service {
         const doc = await model.findById(id).select(fields).lean();
         return doc ? model.toClassInstance(doc) : null;
     }
-  
+    
+    static createObject(paths, selects = {}, nestedPopulates = {}) {
+        return paths.map(path => {
+            const entry = {
+              path,
+              select: selects[path] || undefined
+            };
+        
+            if (nestedPopulates[path]) {
+              entry.populate = nestedPopulates[path];
+            }
+        
+            return entry;
+        });
+    }
+
     /**
      * Obtiene documento con campos seleccionados y campos poblados, devuelve instancia de clase.
      * @param {Mongoose.Model} model 
@@ -73,20 +91,16 @@ class Service {
      * @param {Array<string>} selectedFields
      * @returns {Promise<Object|null>} Instancia de clase
      */
-    static async getSelectAndPopulate(model, id, fields, populateFields, selectedFields) {
-        if (!Array.isArray(populateFields) || !Array.isArray(selectedFields)) {
-                throw new Error("Fields populateFields and selectedFields must be arrays");
+    static async getSelectAndPopulate(modelWhereConsultData, modelTogetInstance, 
+                                        id, fields, 
+                                        paths, selectsFieldsByPath = {}, nestedPopulatesFields = {}) {
+        if (!Array.isArray(paths)) {
+                throw new Error("Fields paths must be array");
         }
         
-        const list = [];
-        for (let i = 0; i  < populateFields.length; i++) {
-            list.push({
-                path: populateFields[i],
-                select: selectedFields[i] ?? ""
-            });
-        }
-        const doc = await model.findById(id).select(fields).populate(list).lean();
-        return doc ? model.toClassInstance(doc) : null;
+        const populateParams = Service.createObject(paths, selectsFieldsByPath,nestedPopulatesFields);
+        const doc = await modelWhereConsultData.findById(id).select(fields).populate(populateParams).lean();
+        return doc ? modelTogetInstance.toClassInstance(doc) : null;
     }
   
     /**
@@ -96,7 +110,8 @@ class Service {
      * @param {string} populateFields
      * @returns {Promise<Object|null>} Instancia de clase
      */
-    static async getPopulate(model, id, populateFields) {
+    static async getPopulate(model, id, paths, selectsFieldsByPath = {}, nestedPopulatesFields = {}) {
+        const populateFields = Service.createObject(paths, selectsFieldsByPath, nestedPopulatesFields);
         const doc = await model.findById(id).populate(populateFields).lean();
         return doc ? model.toClassInstance(doc) : null;
     }

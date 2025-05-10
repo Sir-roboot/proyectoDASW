@@ -10,31 +10,37 @@ class SaleService extends Service {
      * @param {CartClass} cartInstance - Instancia de carrito.
      * @returns {Promise<Object>} Venta guardada en la base de datos.
      */
-    static async createSale(saleModel, Sale, ProductSale, cartInstance) {
-        const saleInstance = new Sale(
-            cartInstance.idCart,
-            cartInstance.items.map(cartItem => {
-                let product = cartItem.product;
-                return new ProductSale(
-                    product.idProduct,
-                    product.name,
-                    product.brand,
-                    product.price,
-                    product.stock,
-                    product.capacity,
-                    product.waterproof,
-                    product.image,
-                    product.category,
-                    cartItem.amountToBuy,
-                    cartItem.priceTotal
-                );
-            }),
-            new Date(),
+    static async createSale(saleModel, SaleClass, ProductSaleClass, ServiceClass, cartInstance) {
+        const saleId = saleModel.getNewId().toString();
+    
+        const productSales = cartInstance.items.map(cartItem => {
+            const product = cartItem.product;
+            return new ProductSaleClass(
+                product.idProduct,
+                product.name,
+                product.brand,
+                product.price,
+                product.stock,
+                product.capacity,
+                product.waterproof,
+                product.image,
+                product.category,
+                cartItem.amountToBuy,
+                cartItem.priceTotal
+            );
+        });
+    
+        const saleInstance = new SaleClass(
+            saleId,
+            productSales,
             cartInstance.total,
+            new Date(),
             cartInstance.status
         );
-        return await this.create(saleModel, saleInstance.classToObject());
+    
+        return await ServiceClass.create(saleModel, saleInstance.classToObjectForMongo());
     }
+    
 
     /**
      * Obtiene una venta específica por su ID.
@@ -42,8 +48,8 @@ class SaleService extends Service {
      * @param {Mongoose.Model} saleModel - Modelo de venta de Mongoose.
      * @returns {Promise<Object|null>} Venta encontrada o null.
      */
-    static async getSale(saleId, saleModel) {
-        return await this.getById(saleModel, saleId);
+    static async getSale(saleId, saleModel, ServiceClass) {
+        return await ServiceClass.getById(saleModel, saleId);
     }
 
     /**
@@ -63,16 +69,14 @@ class SaleService extends Service {
      * @param {Mongoose.Model} userModel - Modelo de usuario (CustomerUser/AdminUser).
      * @returns {Promise<Array<Object>>} Lista de ventas o lista vacía.
      */
-    static async getUserSales(userId, userModel) {
-        const user = await this.getSelectAndPopulate(
-            userModel,
-            userId,
-            "sales",     // Selecciona solo el campo sales
-            ["sales"],   // Poblamos las referencias a sales
-            []           // Sin restricciones de campos en sales
-        );
+    static async getUserSales(userId, userModel, ServiceClass) {
+        // Pobla tanto 'sales' como 'cart', si tu lógica requiere convertirlos en clases
+        const user = await ServiceClass.getPopulate(userModel, userId, "sales cart");
+    
         if (!user) throw new Error("User not found.");
-        return user.sales || [];
+    
+        // Ya es una instancia reconstruida desde toClassInstance
+        return user.purchaseHistory || [];
     }
 
     /**
@@ -85,22 +89,20 @@ class SaleService extends Service {
      * @param {Mongoose.Model} saleModel - Modelo de venta de Mongoose.
      * @returns {Promise<Object|null>} Usuario actualizado o null.
      */
-    static async addSaleToUserSales(userId, saleId, userModel, saleModel) {
-        // 1. Obtener las ventas actuales del usuario
-        const listSales = await this.getUserSales(userId, userModel);
-        
-        // 2. Obtener la venta recién creada
-        const saleInstance = await this.getSale(saleId, saleModel);
-        if (!saleInstance) throw new Error("Sale not found.");
-
-        // 3. Agregar la nueva venta a la lista
-        listSales.push(saleInstance);
-
-        // 4. Actualizar solo el campo `sales` en el usuario
-        return await this.updateData(userModel, userId, {
-            sales: listSales.map(i => i.classToObjectForMongo())
+    static async addSaleToUserSales(userId, saleId, userModel, saleModel, ServiceClass) {
+        const user = await ServiceClass.getById(userModel, userId);
+        if (!user) throw new Error("Usuario no encontrado");
+    
+        const saleInstance = await ServiceClass.getById(saleModel, saleId);
+        if (!saleInstance) throw new Error("Venta no encontrada");
+    
+        const updated = await ServiceClass.updateData(userModel, userId, {
+            sales: [...user.purchaseHistory, saleInstance].map(s => s.idSale)
         });
+    
+        if (!updated) throw new Error("No se pudo agregar la venta al historial del usuario");
     }
+    
 }
 
 module.exports = SaleService;

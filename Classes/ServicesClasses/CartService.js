@@ -1,6 +1,7 @@
-const Service = require("../AbstractClasses/Service");
+const { Category } = require('../../Models/models');
+const { getPopulate } = require('./SaleService');
 
-class CartService extends Service {
+class CartService {
     /**
      * Obtiene el carrito de un usuario dado su ID.
      * @param {string} userId - ID del usuario (Mongo _id).
@@ -9,8 +10,22 @@ class CartService extends Service {
      * @returns {Promise<CartClass|null>} Instancia de CartClass o null.
      */
     static async getCart(userId, userModel, cartModel, ServiceClass) {
-        const doc = await userModel.findById(userId).select('cart').lean();
-        const cart  = await ServiceClass.getPopulate(cartModel, doc.cart, 'items.product');
+        const cart = await ServiceClass.getSelectAndPopulate(
+            userModel,   // modelo del usuario
+            cartModel,   // modelo del que obtendrás la instancia final (Cart)
+            userId,      // ID del usuario
+            "cart",      // seleccionar solo el campo `cart`
+            ["cart"],    // vamos a poblar `cart`
+            { cart: undefined }, // (opcional) no queremos seleccionar nada específico dentro de cart
+            {
+              cart: [ // subpopulate sobre cart
+                { 
+                    path: "items.product",
+                    populate: { path: "category"}
+                } 
+              ]
+            }
+        )
         return cart;
     }
 
@@ -25,21 +40,21 @@ class CartService extends Service {
      * @param {typeof import("../Classes/CartItem")} CartItemClass
      */
     static async addToCart(
-        mongoose,
         userId,
         productId,
         userModel,
         cartModel,
         productModel,
-        CartItemClass
+        CartItemClass,
+        ServiceClass
     ) {
         // 1. Cargar el carrito
-        const cartInstance = await this.getCart(userId, userModel);
-        if (!cartInstance) throw new Error('Usuario o carrito no encontrado');
+        const cartInstance = await CartService.getCart(userId, userModel, cartModel, ServiceClass);
+        if (!cartInstance) throw new Error('Carrito no encontrado');
 
         // 2. Buscar si ya existe el ítem
         const existingItem = cartInstance.items.find(
-            item => item.product.idProduct === productId
+            cartItem => cartItem.product.idProduct === productId
         );
 
         if (existingItem) {
@@ -55,18 +70,18 @@ class CartService extends Service {
             }
         } else {
             // 3. Crear nuevo CartItem
-            const newId = await this.getNewId(mongoose);
-            const productInstance = await this.getPopulate(
+            const newId = await cartModel.getNewId();
+            const productInstance = await ServiceClass.getPopulate(
                 productModel,
                 productId,
-                'category'
+                ['category'],{cartegory: undefined},{Category: undefined}
             );
             const newItem = new CartItemClass(newId, productInstance, 1);
             cartInstance.addItem(newItem);
         }
 
         // 4. Guardar cambios en Mongo
-        return await this.updateData(
+        return await ServiceClass.updateData(
             cartModel,
             cartInstance.idCart,
             cartInstance.classToObjectForMongo()
@@ -117,16 +132,17 @@ class CartService extends Service {
     /**
      * Elimina un producto del carrito del usuario.
      * @param {string} userId
+     * @param {string} productId
      * @param {Mongoose.Model} userModel
      * @param {Mongoose.Model} cartModel
-     * @param {string} productId
+     * @param {typeof Service} ServiceClass
      */
-    static async removeCartItem(userId, userModel, cartModel, productId) {
-        const cartInstance = await this.getCart(userId, userModel);
+    static async removeCartItem(userId, productId, userModel, cartModel, ServiceClass) {
+        const cartInstance = await CartService.getCart(userId, userModel,cartModel,ServiceClass);
         if (!cartInstance) throw new Error('Carrito no encontrado');
 
         cartInstance.removeItem(productId);
-        return await this.updateData(
+        return await ServiceClass.updateData(
             cartModel,
             cartInstance.idCart,
             cartInstance.classToObjectForMongo()
@@ -143,9 +159,8 @@ class CartService extends Service {
     static async emptyCart(userId, userModel, cartModel, ServiceClass) {
         const cartInstance = await CartService.getCart(userId, userModel, cartModel, ServiceClass);
         if (!cartInstance) throw new Error('Carrito no encontrado');
-
-        const empty = 
-        return await this.updateData(
+        cartInstance.clearOutCart();
+        return await ServiceClass.updateData(
             cartModel,
             cartInstance.idCart,
             empty.classToObjectForMongo()
@@ -170,30 +185,23 @@ class CartService extends Service {
         idUser,
         userModel,
         cartModel,
-        saleModel,
-        methodGetCart,
-        methodEmptyCart,
+        ServiceClass,
         methodCreateSale,
-        methodAddSaleToUser,
-        SaleClass,
-        ProductSaleClass
+        methodAddSaleToUser
     ) {
-
-        const cartInstance = await methodGetCart(idUser, userModel, cartModel);
+        const cartInstance = await CartService.getCart(idUser,userModel,cartModel,ServiceClass);
         if (!cartInstance || cartInstance.isEmpty()) {
             throw new Error("Tu carrito está vacío");
         }
         // Crear venta a partir del carrito
-        const saleInstance = await methodCreateSale(
-            saleModel,
-            SaleClass,
-            ProductSaleClass,
-            cartInstance
-        );
+        const saleInstance = await methodCreateSale(cartInstance);
+        if(!saleInstance) throw new Error("No se pudo crear la venta");
+        
         // Agregar venta al historial del usuario
-        await methodAddSaleToUser(idUser, saleInstance.idSale, userModel);
+        await methodAddSaleToUser(saleInstance.idSale);
         // Vaciar el carrito y retornar el resultado
-        return await methodEmptyCart(idUser, userModel, cartModel);
+        await CartService.emptyCart(idUser,userModel,cartModel,ServiceClass);
+        return {message : "Venta realizada con éxito"};
     }
 }
 
