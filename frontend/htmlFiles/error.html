@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Error 404 · CasasCampo</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f8f9fa;
+            flex-direction: column;
+            padding-top: 70px;
+        }
+        .error-code {
+            font-size: 5rem;
+            font-weight: bold;
+        }
+        .error-message {
+            font-size: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="navbar-placeholder"></div>
+
+    <div class="text-center">
+        <div class="error-code">404</div>
+        <div class="error-message">Página no encontrada</div>
+        <p class="lead">La página que buscas no existe o ha ocurrido un error.</p>
+        <a href="index.html" class="btn btn-primary">Volver al Inicio</a>
+    </div>
+
+    <footer class="text-center mt-auto py-3 bg-dark text-white w-100">
+        &copy; 2025 CasasCampo
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        async function loadNavbar() {
+            try {
+                const resp = await fetch('navbar.html');
+                const html = await resp.text();
+                document.getElementById('navbar-placeholder').innerHTML = html;
+            } catch (error) {
+                console.error('Error cargando el navbar:', error);
+            }
+        }
+        loadNavbar();
+    </script>
+
+</body>
+</html>
