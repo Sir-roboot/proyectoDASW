@@ -1,12 +1,10 @@
-const { Category } = require('../../Models/models');
-const { getPopulate } = require('./SaleService');
-
 class CartService {
     /**
      * Obtiene el carrito de un usuario dado su ID.
      * @param {string} userId - ID del usuario (Mongo _id).
      * @param {Mongoose.Model} userModel - Modelo de Mongoose del usuario.
-     * @param {typeof Service} ServiceClass - Modelo de Mongoose del usuario.
+     * @param {Mongoose.Model} cartModel - Model del carrito de compras.
+     * @param {typeof Service} ServiceClass - Clase con servcios para hacer los metdso de cada modelo.
      * @returns {Promise<CartClass|null>} Instancia de CartClass o null.
      */
     static async getCart(userId, userModel, cartModel, ServiceClass) {
@@ -33,49 +31,37 @@ class CartService {
      * Agrega un producto al carrito del usuario.
      * @param {import('mongoose').Mongoose} mongoose
      * @param {string} userId
-     * @param {string} productId
+     * @param {string} productId, 
      * @param {Mongoose.Model} userModel
      * @param {Mongoose.Model} cartModel
      * @param {Mongoose.Model} productModel
-     * @param {typeof import("../Classes/CartItem")} CartItemClass
+     * @param {typeof CartItem} CartItemClass,
+     * @param {typeof Service} ServiceClass,
+     * @returns {boolean} 
      */
-    static async addToCart(
-        userId,
-        productId,
-        userModel,
-        cartModel,
-        productModel,
-        CartItemClass,
-        ServiceClass
-    ) {
+    static async addToCart( userId, productId, userModel, cartModel, productModel, CartItemClass, ServiceClass ) {
         // 1. Cargar el carrito
         const cartInstance = await CartService.getCart(userId, userModel, cartModel, ServiceClass);
         if (!cartInstance) throw new Error('Carrito no encontrado');
 
         // 2. Buscar si ya existe el ítem
-        const existingItem = cartInstance.items.find(
-            cartItem => cartItem.product.idProduct === productId
+        const cartItem = cartInstance.items.find(
+            item => item.product.idProduct === productId
         );
 
-        if (existingItem) {
-            existingItem.amountToBuy += 1;
-            // Recalcular total
-            if (typeof cartInstance.calculateNewTotal === 'function') {
-                cartInstance.calculateNewTotal();
-            } else {
-                cartInstance.total = cartInstance.items.reduce(
-                    (sum, i) => sum + i.priceTotal,
-                    0
-                );
-            }
+        if (cartItem) {
+            cartItem.amountToBuy += 1;
+            // Recalcular el precio total del carrito
+            cartInstance.calculateTotal();
         } else {
-            // 3. Crear nuevo CartItem
-            const newId = await cartModel.getNewId();
+            // 3. Crear nuevo CartItem   
             const productInstance = await ServiceClass.getPopulate(
                 productModel,
                 productId,
                 ['category'],{cartegory: undefined},{Category: undefined}
             );
+            if(!productInstance) throw new Error("Producto no encontrado");
+            
             const newItem = new CartItemClass(newId, productInstance, 1);
             cartInstance.addItem(newItem);
         }
@@ -83,8 +69,14 @@ class CartService {
         // 4. Guardar cambios en Mongo
         return await ServiceClass.updateData(
             cartModel,
-            cartInstance.idCart,
-            cartInstance.classToObjectForMongo()
+            {
+                _id: cartInstance.idCart
+            },
+            {
+                $set: {
+                    items: cartInstance.items.map(cartItem => cartItem.classToObjectForMongo())
+                }
+            }
         );
     }
 
@@ -95,15 +87,11 @@ class CartService {
      * @param {Mongoose.Model} cartModel
      * @param {string} productId
      * @param {number} newAmount
+     * @param {typeof Service} ServiceClass,
+     * @returns {boolean}
      */
-    static async updateCartItem(
-        userId,
-        userModel,
-        cartModel,
-        productId,
-        newAmount
-    ) {
-        const cartInstance = await this.getCart(userId, userModel);
+    static async updateCartItemAmount( userId, userModel, cartModel, productId, newAmount, ServiceClass ) {
+        const cartInstance = await CartService.getCart(userId, userModel, cartModel, ServiceClass);
         if (!cartInstance) throw new Error('Carrito no encontrado');
 
         const cartItem = cartInstance.items.find(
@@ -111,23 +99,29 @@ class CartService {
         );
         if (!cartItem) throw new Error('Producto no existe en el carrito');
 
+        // Actualizar la cantidad en la instancia
         cartItem.amountToBuy = newAmount;
-        // Recalcular total
-        if (typeof cartInstance.calculateNewTotal === 'function') {
-            cartInstance.calculateNewTotal();
-        } else {
-            cartInstance.total = cartInstance.items.reduce(
-                (sum, i) => sum + i.priceTotal,
-                0
-            );
-        }
 
+        // Recalcular el precio total del carrito
+        cartInstance.calculateTotal();
+
+        // Actualizar SOLO el CartItem y el total del carrito en Mongo
         return await this.updateData(
             cartModel,
-            cartInstance.idCart,
-            cartInstance.classToObjectForMongo()
+            {
+                _id: cartInstance.idCart,
+                "items._id": cartItem.idCartItem
+            },
+            {
+                $set: {
+                    "items.$.amountToBuy": cartItem.amountToBuy,
+                    "items.$.priceTotal": cartItem.priceTotal,
+                    total: cartInstance.total
+                }
+            }
         );
     }
+
 
     /**
      * Elimina un producto del carrito del usuario.
@@ -144,8 +138,13 @@ class CartService {
         cartInstance.removeItem(productId);
         return await ServiceClass.updateData(
             cartModel,
-            cartInstance.idCart,
-            cartInstance.classToObjectForMongo()
+            {
+                _id: cartInstance.idCart
+            },
+            {
+                $pull: { items: { _id: cartItemId } },
+                $set: { total: cartInstance.total }
+            }
         );
     }
 
@@ -162,8 +161,16 @@ class CartService {
         cartInstance.clearOutCart();
         return await ServiceClass.updateData(
             cartModel,
-            cartInstance.idCart,
-            empty.classToObjectForMongo()
+            {
+                _id: cartInstance.idCart 
+            },
+            {
+                $set: {
+                    items: cartInstance.items,
+                    total: cartInstance.total,
+                    status: cartInstance.status
+                }
+            }
         );
     }
 
@@ -200,8 +207,8 @@ class CartService {
         // Agregar venta al historial del usuario
         await methodAddSaleToUser(saleInstance.idSale);
         // Vaciar el carrito y retornar el resultado
-        await CartService.emptyCart(idUser,userModel,cartModel,ServiceClass);
-        return {message : "Venta realizada con éxito"};
+        const result = await CartService.emptyCart(idUser,userModel,cartModel,ServiceClass);
+        return result;
     }
 }
 

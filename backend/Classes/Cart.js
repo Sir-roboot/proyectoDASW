@@ -94,7 +94,7 @@ class Cart {
     }
 
     calculateNewTotal() {
-        const total = this.items.reduce((acc, item) => acc + item.priceTotal, 0);
+        const total = this.items.reduce((sum, item) => sum + item.priceTotal, 0);
         this.total = total;
     }
 

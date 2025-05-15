@@ -1,4 +1,4 @@
-// 📦 Imports
+// Imports
 const mongoose = require('mongoose');
 
 const CategoryClass = require('../Classes/Category');
@@ -9,9 +9,9 @@ const SaleClass = require('../Classes/Sale');
 const AddressClass = require('../Classes/Address');
 const CustomerUserClass = require('../Classes/CustomerUser');
 const AdminUserClass = require('../Classes/AdminUser');
-const ProductClass = require('../Classes/AbstractClasses/Product');
+const ProductClass = require('../AbstractClasses/Product');
 
-// 🧱 Esquemas
+// Esquemas
 const CategorySchema = new mongoose.Schema({
     name: { type: String, required: true },
     description: { type: String }
@@ -88,7 +88,7 @@ const AdminUserSchema = new mongoose.Schema({
     customerRef: { type: mongoose.Schema.Types.ObjectId, ref: 'CustomerUser' }
 });
 
-// 🧠 Métodos estáticos
+// Métodos estáticos
 CategorySchema.statics.toClassInstance = function (doc) {
     return CategoryClass.fromObject(doc);
 };
