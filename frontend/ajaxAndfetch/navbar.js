@@ -22,7 +22,7 @@ function setupLogout() {
             localStorage.removeItem('authToken');
             // Redirigir a página de login o home
             console.log("hola 3");
-            window.location.href = '../frontend/loginOrSingUpPage.html';
+            window.location.href = './loginOrSingUpPage.html';
             console.log(window.location.href)
         });
     }

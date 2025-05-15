@@ -164,7 +164,7 @@ class Product {
 
         const categoryInstance = category instanceof Category
             ? category
-            : Category.fromObject(category); // Asegúrate de tener este método
+            : Category.fromObject(category);
 
         return new Product(
             _id?.toString() || 'temp-id',

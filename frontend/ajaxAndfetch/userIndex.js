@@ -6,7 +6,7 @@ async function loadNavbar() {
         console.log(document.getElementById('logoutBtn'))
         // ✅ Inyecta manualmente navbar.js DESPUÉS de insertar el HTML
         const script = document.createElement('script');
-        script.src = './ajaxAndfetch/navbar.js';
+        script.src = '../ajaxAndfetch/navbar.js';
         script.onload = () => {
             // Si quieres puedes llamar aquí a funciones específicas si navbar.js las define globalmente
             console.log('navbar.js cargado y ejecutado correctamente');
