@@ -168,7 +168,7 @@ AdminUserSchema.statics.toClassInstance = async function(doc) {
     );
 };
 
-// 🏷️ Modelos principales
+//Modelos principales
 const Category = mongoose.model('Category', CategorySchema);
 const Cart = mongoose.model('Cart', CartSchema);
 const Sale = mongoose.model('Sale', SaleSchema);
@@ -176,7 +176,7 @@ const Product = mongoose.model('Product', ProductSchema);
 const CustomerUser = mongoose.model('CustomerUser', CustomerUserSchema);
 const AdminUser = mongoose.model('AdminUser', AdminUserSchema);
 
-// 📤 Exportaciones
+//Exportaciones
 module.exports = {
     Category,
     CartItemSchema,
