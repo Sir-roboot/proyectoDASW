@@ -1,10 +1,12 @@
+import FetchAuthentication from './FetchAuthentication.js';
+
 async function loadNavbar() {
     try {
         const resp = await fetch('./navbar.html');
         const html = await resp.text();
         document.getElementById('navbar-placeholder').innerHTML = html;
         console.log(document.getElementById('logoutBtn'))
-        // ✅ Inyecta manualmente navbar.js DESPUÉS de insertar el HTML
+        // Inyecta manualmente navbar.js DESPUÉS de insertar el HTML
         const script = document.createElement('script');
         script.src = '../ajaxAndfetch/navbar.js';
         script.onload = () => {
@@ -19,88 +21,88 @@ async function loadNavbar() {
 
 loadNavbar();
     
-// 🌐 URL base de tu API
-const API_BASE = 'http://localhost:3000/api';
-    
+
+const API_BASE = 'http://localhost:3000/CampingHouse';
+
 document.addEventListener('DOMContentLoaded', async () => {
-    // Obtener ID de query string
     const params = new URLSearchParams(window.location.search);
     const id = params.get('id');
-    if (!id) return console.error('No se proporcionó ID de propiedad');
-    
+    if (!id) return console.error('No se proporcionó ID de producto');
+
     try {
-        // 1️⃣ Petición para obtener detalles
+        // Obtener detalles del producto
         const res = await fetch(`${API_BASE}/product/${id}`, {
             method: 'GET',
             mode: 'cors',
             headers: { 'Accept': 'application/json' }
         });
+
         if (!res.ok) throw new Error(`Error ${res.status}: ${res.statusText}`);
-        const house = await res.json();
-    
-        // 2️⃣ Inyectar breadcrumb
-        document.getElementById('bc-name').textContent = house.title;
-    
-        // 3️⃣ Inyectar datos principales
-        document.getElementById('prod-name').textContent        = house.title;
-        document.getElementById('prod-location').textContent    = `${house.city}, ${house.state}`;
-        document.getElementById('prod-price').textContent       = `$${house.price}`;
-        document.getElementById('prod-description').textContent = house.description;
-    
-        // 4️⃣ Inyectar imágenes en carousel
+        const product = await res.json();
+
+        // Inyectar datos en el HTML
+        document.getElementById('bc-name').textContent = product.name;
+        document.getElementById('prod-name').textContent = product.name;
+        document.getElementById('prod-location').textContent = product.brand;
+        document.getElementById('prod-price').textContent = `$${product.price}`;
+        document.getElementById('prod-description').textContent = product.description;
+
+        // Inyectar imágenes
         const carouselInner = document.getElementById('carouselInner');
         carouselInner.innerHTML = '';
-        house.images.forEach((imgUrl, idx) => {
+        product.images.forEach((imgUrl, idx) => {
             const div = document.createElement('div');
             div.className = 'carousel-item' + (idx === 0 ? ' active' : '');
-            const ima = document.createElement('img')
-            ima.src = imgUrl
-            ima.className = "d-block w-100 carousel-img"
-            ima.alt = house.title
-            div.innerHTML.appendChild(ima)
-            //div.innerHTML = `<img src="${imgUrl}" class="d-block w-100 carousel-img" alt="${house.title}">`;
+            const img = document.createElement('img');
+            img.src = imgUrl;
+            img.className = "d-block w-100 carousel-img";
+            img.alt = product.name;
+            div.appendChild(img);
             carouselInner.appendChild(div);
         });
-    
-        // 5️⃣ Cantidad máxima según disponibilidad
+
+        // Inyectar opciones de cantidad
         const quantitySelect = document.getElementById('quantity');
         quantitySelect.innerHTML = '';
-        const maxQty = house.stock;
-        for(let i = 0; i <= Math.min(maxQty, 10); i++) {
+        for (let i = 1; i <= Math.min(product.stock, 10); i++) {
             const opt = document.createElement('option');
             opt.value = i;
             opt.textContent = i;
             quantitySelect.appendChild(opt);
         }
-       
-        // 6️⃣ Botones: agregar al carrito y comprar ahora
+
+        // Agregar al carrito
         document.getElementById('addCart').addEventListener('click', async () => {
-            // Aquí metes tu lógica de carrito, p.ej fetch POST /api/user/cart
+            const quantity = parseInt(quantitySelect.value);
+            if (isNaN(quantity) || quantity <= 0) {
+                return alert('Selecciona una cantidad válida');
+            }
 
-            await fetch(`${API_BASE}/user/cart/add`,{
-                    method: 'POST',             // 🚀 Puede ser 'GET', 'POST', 'PUT', 'PATCH', 'DELETE', etc.
-                    mode: 'cors',               // 🌐 Habilita CORS
-                    credentials: 'include',     // 🔐 (opcional) 'omit' | 'same-origin' | 'include'
+            try {
+                const response = await FetchAuthentication.fetchAuth(`${API_BASE}/user/cart/add`, {
+                    method: 'POST',
+                    mode: 'cors',
                     headers: {
-                        'Content-Type': 'application/json',        // Tipo de contenido
-                        'Authorization': `Bearer ${tuToken}`,      // Tu token JWT u otro esquema
-                        'Accept': 'application/json'               // Qué tipo de respuesta aceptas
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
                     },
-                    body: JSON.stringify({       // 📦 Solo para métodos con body (POST, PUT, PATCH)
-                        productId:,
-                        amount:
+                    body: JSON.stringify({
+                        productId: id,
+                        amount: quantity
                     })
-            });
-            console.log(`Añadir al carrito: id=${id}, qty=${quantitySelect.value}`);
+                });
+
+                if (!response.ok) throw new Error('No se pudo agregar al carrito');
+                alert('Producto agregado al carrito exitosamente');
+            } catch (err) {
+                console.error('Error al agregar al carrito:', err);
+                alert('Ocurrió un error al agregar al carrito');
+            }
         });
 
-        document.getElementById('buyNow').addEventListener('click', () => {
-            // Lógica de compra inmediata
-            console.log(`Comprar ahora: id=${id}, qty=${quantitySelect.value}`);
-        });
-    } 
-    catch (err) {
-        console.error('Error cargando detalles:', err);
+    } catch (err) {
+        console.error('Error cargando detalles del producto:', err);
     }
 });
+
     

@@ -1,3 +1,7 @@
+/**
+ * Clase que representa un ítem dentro del carrito de compras.
+ * Contiene producto, cantidad y cálculo automático del precio total.
+ */
 const Product = require("./AbstractClasses/Product");
 
 class CartItem {
@@ -7,6 +11,7 @@ class CartItem {
     #priceTotal;
 
     /**
+     * Constructor de CartItem
      * @param {string} idCartItem
      * @param {Product} product
      * @param {number} amountToBuy
@@ -14,14 +19,10 @@ class CartItem {
     constructor(idCartItem, product, amountToBuy) {
         this.idCartItem = idCartItem;
         this.product = product;
-        this.amountToBuy = amountToBuy;
-        this.#priceTotal = this.#product.price * this.#amountToBuy;
+        this.amountToBuy = amountToBuy; // set calcula automáticamente el priceTotal
     }
 
-    get idCartItem() {
-        return this.#idCartItem;
-    }
-
+    get idCartItem() { return this.#idCartItem; }
     set idCartItem(value) {
         if (typeof value !== 'string' || !value.trim()) {
             throw new TypeError("idCartItem debe ser un string no vacío.");
@@ -29,35 +30,31 @@ class CartItem {
         this.#idCartItem = value.trim();
     }
 
-    get product() {
-        return this.#product;
-    }
-
+    get product() { return this.#product; }
     set product(value) {
         if (!(value instanceof Product)) {
             throw new TypeError("product debe ser una instancia de Product.");
         }
         this.#product = value;
+        this.#priceTotal = this.#product.price * (this.#amountToBuy || 0);
     }
 
-    get amountToBuy() {
-        return this.#amountToBuy;
-    }
-
+    get amountToBuy() { return this.#amountToBuy; }
     set amountToBuy(value) {
         if (typeof value !== 'number' || value <= 0 || isNaN(value)) {
             throw new TypeError("amountToBuy debe ser un número mayor a 0.");
         }
         this.#amountToBuy = value;
-        this.#priceTotal = this.#product.price * value;
+        if (this.#product) {
+            this.#priceTotal = this.#product.price * value;
+        }
     }
 
-    get priceTotal() {
-        return this.#priceTotal;
-    }
+    get priceTotal() { return this.#priceTotal; }
 
     /**
-     * Convierte la instancia a objeto plano para MongoDB.
+     * Convierte esta instancia a un objeto plano para MongoDB.
+     * @returns {Object}
      */
     classToObjectForMongo() {
         return {
@@ -86,7 +83,7 @@ class CartItem {
 
         const productInstance = product instanceof Product
             ? product
-            : Product.fromObject(product); // <- asegúrate de tener este método
+            : Product.fromObject(product);
 
         return new CartItem(
             _id.toString(),

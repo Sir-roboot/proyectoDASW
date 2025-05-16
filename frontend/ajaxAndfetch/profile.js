@@ -1,4 +1,4 @@
-
+import FetchAuthentication from './FetchAuthentication.js';
 
 async function loadNavbar() {
     try {
@@ -6,7 +6,7 @@ async function loadNavbar() {
         const html = await resp.text();
         document.getElementById('navbar-placeholder').innerHTML = html;
         console.log(document.getElementById('logoutBtn'))
-        // ✅ Inyecta manualmente navbar.js DESPUÉS de insertar el HTML
+        // Inyecta manualmente navbar.js DESPUÉS de insertar el HTML
         const script = document.createElement('script');
         script.src = '../ajaxAndfetch/navbar.js';
         script.onload = () => {
@@ -21,8 +21,7 @@ async function loadNavbar() {
 
 loadNavbar();
   
-// 🌐 URL base de tu API
-const API_BASE = 'http://localhost:3000/api';
+const API_BASE = 'http://localhost:3000/CampingHouse';
   
 // Campos de perfil disponibles para edición
 const editableFields = [
@@ -35,7 +34,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const profileDataContainer = document.getElementById('profileData');
     const historyBody = document.getElementById('salesHistory').querySelector('tbody');
   
-    // 1️⃣ Cargar datos de usuario
+    // Cargar datos de usuario
     try {
         const res = await fetch(`${API_BASE}/profile`, {
             method: 'GET',
@@ -72,7 +71,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.error('No se pudo cargar perfil:', err);
     }
   
-    // 2️⃣ Agregar listeners a cada modal de edición
+    // Agregar listeners a cada modal de edición
     editableFields.forEach(field => {
         const modalId = `#edit${field.charAt(0).toUpperCase()+field.slice(1)}Modal`;
         const inputId = `edit${field.charAt(0).toUpperCase()+field.slice(1)}Input`;

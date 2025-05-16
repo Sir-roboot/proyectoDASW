@@ -1,3 +1,7 @@
+/**
+ * Clase que representa una venta realizada por un usuario.
+ * Contiene los productos vendidos, el total, fecha y estado.
+ */
 const ProductSale = require('./ProductSale');
 
 class Sale {
@@ -8,6 +12,7 @@ class Sale {
     #products;
 
     /**
+     * Constructor de Sale
      * @param {string} idSale
      * @param {Array<ProductSale>} products
      * @param {number} total
@@ -22,6 +27,7 @@ class Sale {
         this.status = status;
     }
 
+    get idSale() { return this.#idSale; }
     set idSale(idSale) {
         if (typeof idSale !== 'string' || !idSale.trim()) {
             throw new TypeError("idSale debe ser un string no vacío.");
@@ -29,10 +35,7 @@ class Sale {
         this.#idSale = idSale;
     }
 
-    get idSale() {
-        return this.#idSale;
-    }
-
+    get date() { return this.#date; }
     set date(date) {
         const parsed = new Date(date);
         if (isNaN(parsed)) {
@@ -41,10 +44,7 @@ class Sale {
         this.#date = parsed;
     }
 
-    get date() {
-        return this.#date;
-    }
-
+    get total() { return this.#total; }
     set total(total) {
         if (typeof total !== 'number' || isNaN(total) || total < 0) {
             throw new TypeError("total debe ser un número mayor o igual a 0.");
@@ -52,10 +52,7 @@ class Sale {
         this.#total = total;
     }
 
-    get total() {
-        return this.#total;
-    }
-
+    get status() { return this.#status; }
     set status(status) {
         if (typeof status !== 'string' || !status.trim()) {
             throw new TypeError("status debe ser un string no vacío.");
@@ -63,10 +60,7 @@ class Sale {
         this.#status = status.trim();
     }
 
-    get status() {
-        return this.#status;
-    }
-
+    get products() { return this.#products; }
     set products(products) {
         if (!Array.isArray(products)) {
             throw new TypeError("products debe ser un arreglo.");
@@ -79,12 +73,9 @@ class Sale {
         this.#products = products;
     }
 
-    get products() {
-        return this.#products;
-    }
-
     /**
      * Convierte esta instancia a un objeto plano para Mongo.
+     * @returns {Object}
      */
     classToObjectForMongo() {
         return {
@@ -97,7 +88,7 @@ class Sale {
     }
 
     /**
-     * Crea una instancia de Sale a partir de un objeto plano.
+     * Crea una instancia de Sale desde un objeto plano.
      * @param {Object} obj
      * @returns {Sale}
      */
@@ -108,22 +99,18 @@ class Sale {
 
         const {
             _id,
-            products,
-            total,
-            date,
-            status
+            products = [],
+            total = 0,
+            date = new Date(),
+            status = 'pendiente'
         } = obj;
-
-        if (!products || !total || !date || !status) {
-            throw new Error("Faltan campos obligatorios para crear una Sale.");
-        }
 
         const productInstances = products.map(p =>
             p instanceof ProductSale ? p : ProductSale.fromObject(p)
         );
 
         return new Sale(
-            _id?.toString() || undefined,
+            _id?.toString() || 'temp-id',
             productInstances,
             total,
             new Date(date),

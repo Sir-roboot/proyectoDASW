@@ -1,10 +1,12 @@
+import FetchAuthentication from './FetchAuthentication.js';
+
 async function loadNavbar() {
     try {
         const resp = await fetch('./navbar.html');
         const html = await resp.text();
         document.getElementById('navbar-placeholder').innerHTML = html;
         console.log(document.getElementById('logoutBtn'))
-        // ✅ Inyecta manualmente navbar.js DESPUÉS de insertar el HTML
+        // Inyecta manualmente navbar.js DESPUÉS de insertar el HTML
         const script = document.createElement('script');
         script.src = '../ajaxAndfetch/navbar.js';
         script.onload = () => {
@@ -20,8 +22,7 @@ async function loadNavbar() {
 loadNavbar();
   
   
-  // 🌐 URL base de tu API
-const API_BASE = 'http://localhost:3000/api';
+const API_BASE = 'http://localhost:3000/CampingHouse';
   
 document.addEventListener('DOMContentLoaded', () => {
     // Referencias al DOM
@@ -39,7 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let   currentPage = 1;
     let   allHouses   = [];
 
-    // 1️⃣ Petición inicial para obtener todos los datos
+    // Petición inicial para obtener todos los datos
     //    Este fetch carga todos los inmuebles al entrar a la página
     fetch(`${API_BASE}/houses`, {
         method: 'GET',
@@ -61,7 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
     })
     .catch(err => console.error('Error cargando datos iniciales:', err));
 
-    // 2️⃣ Manejo de búsqueda y filtros
+    // Manejo de búsqueda y filtros
     searchForm.addEventListener('submit', async e => {
         e.preventDefault();
         const params = new URLSearchParams();

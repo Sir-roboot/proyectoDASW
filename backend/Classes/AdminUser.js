@@ -1,3 +1,7 @@
+/**
+ * Clase que representa un administrador del sistema.
+ * Hereda de CustomerUser y agrega un ID exclusivo de administrador.
+ */
 const CustomerUser = require("./CustomerUser");
 const Cart = require("./Cart");
 const Sale = require("./Sale");
@@ -7,6 +11,7 @@ class AdminUser extends CustomerUser {
     #idAdmin;
 
     /**
+     * Constructor de AdminUser
      * @param {string} idAdmin - ID único del administrador
      * @param {string} idUser - ID del usuario base (CustomerUser)
      * @param {string} name
@@ -15,23 +20,21 @@ class AdminUser extends CustomerUser {
      * @param {string} password
      * @param {Date} registerDate
      * @param {string} role - Debe ser 'admin'
-     * @param {Cart|null} cart
-     * @param {Sale[]} purchaseHistory
-     * @param {Address|null} address
+     * @param {Cart} cart
+     * @param {Array<Sale>} purchaseHistory
+     * @param {Address} address
      */
     constructor(idAdmin, idUser, name, userName, email, password, registerDate, role, cart, purchaseHistory, address) {
         if (role !== 'admin') {
             throw new TypeError("El rol de un AdminUser debe ser 'admin'.");
         }
 
-        super(idUser, name, userName, email, password, registerDate, role, cart, purchaseHistory, address);
+        super(idUser, name, userName, email, password, cart, purchaseHistory, address);
+        this.registerDate = registerDate;
         this.idAdmin = idAdmin;
     }
 
-    get idAdmin() {
-        return this.#idAdmin;
-    }
-
+    get idAdmin() { return this.#idAdmin; }
     set idAdmin(idAdmin) {
         if (typeof idAdmin !== 'string' || !idAdmin.trim()) {
             throw new TypeError("idAdmin debe ser un string no vacío.");
@@ -40,8 +43,8 @@ class AdminUser extends CustomerUser {
     }
 
     /**
-     * Convierte una representación de objeto plano a una instancia de AdminUser.
-     * @param {object} obj
+     * Convierte un objeto plano en una instancia de AdminUser.
+     * @param {Object} obj
      * @returns {AdminUser}
      */
     static fromObject(obj) {
@@ -49,10 +52,7 @@ class AdminUser extends CustomerUser {
             throw new TypeError("fromObject espera un objeto válido.");
         }
 
-        const {
-            _id,               // id del admin (idAdmin)
-            customerRef        // debe ser un objeto con todos los datos del usuario base
-        } = obj;
+        const { _id, customerRef } = obj;
 
         if (!customerRef) {
             throw new Error("Falta el campo 'customerRef' en el documento del admin.");
@@ -63,7 +63,7 @@ class AdminUser extends CustomerUser {
             : CustomerUser.fromObject(customerRef);
 
         return new AdminUser(
-            _id?.toString(),
+            _id?.toString() || 'temp-id',
             customerInstance.idUser,
             customerInstance.name,
             customerInstance.userName,
@@ -78,7 +78,7 @@ class AdminUser extends CustomerUser {
     }
 
     /**
-     * Convierte la instancia de AdminUser en un objeto plano listo para guardar en MongoDB.
+     * Convierte la instancia a un objeto plano listo para MongoDB.
      * @returns {Object}
      */
     classToObjectForMongo() {

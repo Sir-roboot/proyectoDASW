@@ -1,14 +1,14 @@
+import FetchAuthentication from './FetchAuthentication.js';
+
+// ✅ Conservamos loadNavbar afuera como en tu original
 async function loadNavbar() {
     try {
         const resp = await fetch('./navbar.html');
         const html = await resp.text();
         document.getElementById('navbar-placeholder').innerHTML = html;
-        console.log(document.getElementById('logoutBtn'))
-        // ✅ Inyecta manualmente navbar.js DESPUÉS de insertar el HTML
         const script = document.createElement('script');
         script.src = '../ajaxAndfetch/navbar.js';
         script.onload = () => {
-            // Si quieres puedes llamar aquí a funciones específicas si navbar.js las define globalmente
             console.log('navbar.js cargado y ejecutado correctamente');
         };
         document.body.appendChild(script);
@@ -17,117 +17,130 @@ async function loadNavbar() {
     }
 }
 
-loadNavbar();
-  
-// 🌐 URL base de tu API
-const API_BASE = 'http://localhost:3000/api';
-  
-// Estado del carrito en memoria
-let cartItems = [];
-  
+const API_BASE = 'http://localhost:3000/CampingHouse';
+
 document.addEventListener('DOMContentLoaded', () => {
-    const cartContainer   = document.getElementById('cartItems');
-    const summaryContainer= document.getElementById('cartSummary');
-    const checkoutBtn     = document.getElementById('checkoutBtn');
-    const clearCartBtn    = document.getElementById('clearCartBtn');
-  
-    // 1️⃣ Cargar carrito desde localStorage o backend
-    const saved = localStorage.getItem('cart');
-    cartItems = saved ? JSON.parse(saved) : [];
-    renderCart();
-  
-    // 2️⃣ Renderizar carrito y resumen
-    function renderCart() {
+    loadNavbar();
+    const cartContainer    = document.getElementById('cartItems');
+    const summaryContainer = document.getElementById('cartSummary');
+    const checkoutBtn      = document.getElementById('checkoutBtn');
+    const clearCartBtn     = document.getElementById('clearCartBtn');
+
+    clearCartBtn.addEventListener('click', vaciarCarrito);
+    checkoutBtn.addEventListener('click', realizarCompra);
+
+    async function cargarCarrito() {
+        try {
+            const res = await FetchAuthentication.fetchAuth(`${API_BASE}/user/cart`);
+            const data = await res.json();
+            renderCart(data.cart.items || []);
+        } catch (error) {
+            console.error('Error al cargar el carrito:', error);
+        }
+    }
+
+    function renderCart(items) {
         cartContainer.innerHTML = '';
         let subtotal = 0;
-    
-        cartItems.forEach(item => {
+
+        items.forEach(item => {
             subtotal += item.price * item.quantity;
             const div = document.createElement('div');
             div.className = 'card mb-3 item-card';
             div.innerHTML = `
             <div class="row g-0">
-                <div class="col-4"><img src="${item.image}" alt="${item.name}" class="img-fluid rounded-start"></div>
-                <div class="col-8">
-                <div class="card-body">
-                    <h5 class="card-title">${item.name}</h5>
-                    <p class="card-text text-muted">Cantidad: <input type="number" min="1" value="${item.quantity}" data-id="${item.id}" class="form-control form-control-sm w-auto d-inline-block quantity-input"></p>
-                    <p class="card-text"><small class="text-muted">Precio unitario: $${item.price}</small></p>
-                    <button class="btn btn-sm btn-danger remove-item-btn" data-id="${item.id}">Eliminar</button>
+                <div class="col-4">
+                    <img src="${item.product.imageUrl}" alt="${item.product.name}" class="img-fluid rounded-start">
                 </div>
+                <div class="col-8">
+                    <div class="card-body">
+                        <h5 class="card-title">${item.product.name}</h5>
+                        <p class="card-text text-muted">
+                            Cantidad:
+                            <input type="number" min="1" value="${item.quantity}"
+                                   data-id="${item.product._id}"
+                                   class="form-control form-control-sm w-auto d-inline-block quantity-input">
+                        </p>
+                        <p class="card-text"><small class="text-muted">Precio unitario: $${item.price}</small></p>
+                        <button class="btn btn-sm btn-danger remove-item-btn" data-id="${item.product._id}">Eliminar</button>
+                    </div>
                 </div>
             </div>`;
             cartContainer.appendChild(div);
         });
-    
-        // Calcular impuestos y total
+
         const tax = +(subtotal * 0.16).toFixed(2);
         const total = +(subtotal + tax).toFixed(2);
-    
+
         summaryContainer.innerHTML = `
             <li class="list-group-item d-flex justify-content-between">Subtotal<span>$${subtotal.toFixed(2)}</span></li>
             <li class="list-group-item d-flex justify-content-between">Impuestos (16%)<span>$${tax}</span></li>
             <li class="list-group-item d-flex justify-content-between fw-bold">Total<span>$${total}</span></li>`;
-    
-        // Listeners para inputs y botones
+
         document.querySelectorAll('.quantity-input').forEach(input => {
-                input.addEventListener('change', e => {
+            input.addEventListener('change', e => {
                 const id = e.target.dataset.id;
                 const qty = parseInt(e.target.value);
-                updateQuantity(id, qty);
+                if (qty > 0) actualizarCantidad(id, qty);
             });
         });
-        
+
         document.querySelectorAll('.remove-item-btn').forEach(btn => {
-            btn.addEventListener('click', e => {
-                const id = e.target.dataset.id;
-                removeItem(id);
-            });
+            btn.addEventListener('click', () => eliminarProducto(btn.dataset.id));
         });
-    
-        // Guardar en localStorage
-        localStorage.setItem('cart', JSON.stringify(cartItems));
     }
-  
-    // 3️⃣ Funciones de actualización
-    function updateQuantity(id, qty) {
-        cartItems = cartItems.map(item => item.id === id ? { ...item, quantity: qty } : item);
-        renderCart();
-    }
-  
-    function removeItem(id) {
-        cartItems = cartItems.filter(item => item.id !== id);
-        renderCart();
-    }
-  
-    // 4️⃣ Vaciar carrito
-    clearCartBtn.addEventListener('click', () => {
-        cartItems = [];
-        renderCart();
-    });
-  
-    // 5️⃣ Proceder al pago
-    checkoutBtn.addEventListener('click', async () => {
-        if (!cartItems.length) return alert('Tu carrito está vacío');
+
+    async function actualizarCantidad(productId, cantidad) {
         try {
-            const res = await fetch(`${API_BASE}/user/cart/checkout`, {
-            method: 'POST',
-            mode: 'cors',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-            },
-            body: JSON.stringify({ items: cartItems })
+            await FetchAuthentication.fetchAuth(`${API_BASE}/user/cart/update`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ productId, quantity: cantidad })
             });
-            if (!res.ok) throw new Error(`Error checkout: ${res.status}`);
+            cargarCarrito();
+        } catch (err) {
+            console.error('Error al actualizar cantidad:', err);
+        }
+    }
+
+    async function eliminarProducto(productId) {
+        try {
+            await FetchAuthentication.fetchAuth(`${API_BASE}/user/cart/remove/${productId}`, {
+                method: 'DELETE'
+            });
+            cargarCarrito();
+        } catch (err) {
+            console.error('Error al eliminar producto:', err);
+        }
+    }
+
+    async function vaciarCarrito() {
+        try {
+            await FetchAuthentication.fetchAuth(`${API_BASE}/user/cart/clean`, {
+                method: 'DELETE'
+            });
+            cargarCarrito();
+        } catch (err) {
+            console.error('Error al vaciar carrito:', err);
+        }
+    }
+
+    async function realizarCompra() {
+        try {
+            const res = await FetchAuthentication.fetchAuth(`${API_BASE}/user/cart/purchase`, {
+                method: 'POST'
+            });
             const result = await res.json();
-            alert('Compra realizada con éxito: ' + result.orderId);
-            cartItems = [];
-            renderCart();
+            if (res.ok) {
+                alert('Compra realizada con éxito');
+                cargarCarrito();
+            } else {
+                alert('Error al comprar: ' + result.message);
+            }
         } catch (err) {
             console.error('Error al procesar compra:', err);
-            alert('No se pudo completar la compra');
         }
-    });
+    }
+
+    cargarCarrito();
 });
-  

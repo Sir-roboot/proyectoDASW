@@ -1,23 +1,25 @@
+/**
+ * Clase que representa una categoría de productos.
+ * Contiene identificador, nombre y descripción opcional.
+ */
 class Category {
     #idCategory;
     #name;
     #description;
 
     /**
+     * Constructor de Category
      * @param {string} idCategory
      * @param {string} name
-     * @param {string} description
+     * @param {string} [description]
      */
-    constructor(idCategory, name, description) {
+    constructor(idCategory, name, description = '') {
         this.idCategory = idCategory;
         this.name = name;
         this.description = description;
     }
 
-    get idCategory() {
-        return this.#idCategory;
-    }
-
+    get idCategory() { return this.#idCategory; }
     set idCategory(idCategory) {
         if (typeof idCategory !== 'string' || !idCategory.trim()) {
             throw new TypeError("idCategory debe ser un string no vacío.");
@@ -25,10 +27,7 @@ class Category {
         this.#idCategory = idCategory.trim();
     }
 
-    get name() {
-        return this.#name;
-    }
-
+    get name() { return this.#name; }
     set name(name) {
         if (typeof name !== 'string' || !name.trim()) {
             throw new TypeError("name debe ser un string no vacío.");
@@ -36,10 +35,7 @@ class Category {
         this.#name = name.trim();
     }
 
-    get description() {
-        return this.#description;
-    }
-
+    get description() { return this.#description; }
     set description(description) {
         if (description !== undefined && typeof description !== 'string') {
             throw new TypeError("description debe ser un string si se proporciona.");
@@ -47,6 +43,10 @@ class Category {
         this.#description = description?.trim() || '';
     }
 
+    /**
+     * Convierte la instancia a un objeto plano para MongoDB.
+     * @returns {Object}
+     */
     classToObjectForMongo() {
         return {
             _id: this.idCategory,
@@ -65,9 +65,9 @@ class Category {
             throw new TypeError("fromObject espera un objeto válido.");
         }
 
-        const { _id, name, description } = obj;
+        const { _id, name, description = '' } = obj;
 
-        if (!name) {
+        if (!name || typeof name !== 'string') {
             throw new Error("Falta el campo 'name' para crear una categoría.");
         }
 

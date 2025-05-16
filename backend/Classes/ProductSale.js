@@ -1,16 +1,35 @@
-const Product = require("./AbstractClasses/Product");
+/**
+ * Clase que representa un producto vendido en una venta.
+ * Hereda de Product y añade campos de cantidad y precio total.
+ */
+const Product = require("../AbstractClasses/Product");
 const Category = require("./Category");
 
 class ProductSale extends Product {
     #amountToBuy;
     #priceTotal;
 
+    /**
+     * Constructor de ProductSale.
+     * @param {string} idProduct
+     * @param {string} name
+     * @param {string} brand
+     * @param {number} price
+     * @param {number} stock
+     * @param {string} capacity
+     * @param {boolean} waterproof
+     * @param {string} image
+     * @param {Category} category
+     * @param {number} amountToBuy - Cantidad comprada
+     * @param {number} [priceTotal] - Precio total (opcional, se calcula si no se da)
+     */
     constructor(idProduct, name, brand, price, stock, capacity, waterproof, image, category, amountToBuy, priceTotal) {
         super(idProduct, name, brand, price, stock, capacity, waterproof, image, category);
         this.amountToBuy = amountToBuy;
         this.priceTotal = priceTotal ?? (amountToBuy * price);
     }
 
+    get amountToBuy() { return this.#amountToBuy; }
     set amountToBuy(value) {
         if (typeof value !== 'number' || value <= 0 || isNaN(value)) {
             throw new TypeError("amountToBuy debe ser un número mayor a 0.");
@@ -18,10 +37,7 @@ class ProductSale extends Product {
         this.#amountToBuy = value;
     }
 
-    get amountToBuy() {
-        return this.#amountToBuy;
-    }
-
+    get priceTotal() { return this.#priceTotal; }
     set priceTotal(value) {
         if (typeof value !== 'number' || value < 0 || isNaN(value)) {
             throw new TypeError("priceTotal debe ser un número válido.");
@@ -29,15 +45,15 @@ class ProductSale extends Product {
         this.#priceTotal = value;
     }
 
-    get priceTotal() {
-        return this.#priceTotal;
-    }
-
+    /**
+     * Convierte la instancia en un objeto plano para persistencia en MongoDB.
+     * @returns {Object}
+     */
     classToObjectForMongo() {
         const dataProduct = super.classToObjectForMongo();
         const { _id, category, ...productFields } = dataProduct;
         return {
-            idProduct: _id,
+            _id: _id,
             ...productFields,
             category: category.classToObjectForMongo(),
             amountBought: this.amountToBuy,
@@ -45,6 +61,12 @@ class ProductSale extends Product {
         };
     }
 
+    /**
+     * Crea una instancia de ProductSale desde un objeto plano.
+     * Permite que algunos campos opcionales vengan incompletos.
+     * @param {Object} doc
+     * @returns {ProductSale}
+     */
     static fromObject(doc) {
         if (!doc || typeof doc !== 'object') {
             throw new TypeError("fromObject espera un objeto válido.");
@@ -53,14 +75,14 @@ class ProductSale extends Product {
         const {
             idProduct,
             name,
-            brand,
+            brand = '',
             price,
-            stock,
-            capacity,
-            waterproof,
-            image,
+            stock = 0,
+            capacity = '',
+            waterproof = false,
+            image = '',
             category,
-            amountBought, // <- ¡este es el nuevo nombre!
+            amountBought,
             priceTotal
         } = doc;
 

@@ -1,53 +1,89 @@
-const Service = require("../AbstractClasses/Service");
-const { AdminUser, Product } = require('../../Models/models');
-
-class AdminService extends Service {
-  
-    // Cambiar rol de un usuario
-    static async changeUserRole(userId, newRole) {
-        // Usamos getById para buscar al usuario
-        const user = await this.getById(AdminUser, userId);  // Buscamos al usuario en AdminUser
-        if (!user) {
-        return { success: false, message: "Usuario no encontrado" };
+/**
+ * Servicio para operaciones administrativas sobre usuarios y productos.
+ */
+class AdminService {
+    /**
+     * Actualiza campos de un usuario customer.
+     * @param {string} customerId - ID del usuario customer
+     * @param {Object} updateData - Campos a actualizar (nombre, email, etc.)
+     * @param {typeof Service} ServiceClass - Clase base de servicios inyectada
+     * @param {typeof CustomerUser} CustomerUserModel - Modelo inyectado de usuario customer
+     * @returns {Promise<Object>} Resultado de la operación
+     */
+    static async updateCustomer(customerId, updateData, ServiceClass, CustomerUserModel) {
+        const customer = await ServiceClass.getById(CustomerUserModel, customerId);
+        if (!customer) {
+            return { success: false, message: "Usuario no encontrado" };
         }
-        
-        // Actualizamos el rol usando el método de la clase base Service
-        const updatedUser = await this.updateData(AdminUser, userId, { role: newRole });
-        return { success: true, user: updatedUser };
+        const updated = await ServiceClass.updateData(CustomerUserModel, customerId, updateData);
+        return { success: true, customer: updated };
     }
 
-    // Agregar un nuevo producto
-    static async addProduct(productData) {
-        // Usamos el método create para agregar un producto nuevo
-        const newProduct = await this.create(Product, productData);
+    /**
+     * Elimina un usuario customer del sistema.
+     * @param {string} customerId - ID del usuario a eliminar
+     * @param {typeof Service} ServiceClass - Clase base de servicios inyectada
+     * @param {typeof CustomerUser} CustomerUserModel - Modelo inyectado de usuario customer
+     * @returns {Promise<Object>} Resultado de la operación
+     */
+    static async removeCustomer(customerId, ServiceClass, CustomerUserModel) {
+        const customer = await ServiceClass.getById(CustomerUserModel, customerId);
+        if (!customer) {
+            return { success: false, message: "Usuario no encontrado" };
+        }
+        const result = await CustomerUserModel.deleteOne({ _id: customerId });
+        return { success: true, message: "Usuario eliminado", result };
+    }
+
+    /**
+     * Agrega un nuevo producto al sistema.
+     * @param {Object} productData - Datos del nuevo producto
+     * @param {typeof Service} ServiceClass - Clase base de servicios inyectada
+     * @param {typeof Product} ProductModel - Modelo inyectado de producto
+     * @returns {Promise<Object>} Resultado con el producto creado
+     */
+    static async addProduct(productData, ServiceClass, ProductModel) {
+        const newProduct = await ServiceClass.create(ProductModel, productData);
         return { success: true, product: newProduct };
     }
 
-    // Actualizar un producto existente
-    static async updateProduct(productId, updateData) {
-        // Usamos el método updateData para actualizar el producto
-        const updatedProduct = await this.updateData(Product, productId, updateData);
+    /**
+     * Actualiza un producto existente.
+     * @param {string} productId - ID del producto a actualizar
+     * @param {Object} updateData - Campos a modificar
+     * @param {typeof Service} ServiceClass - Clase base de servicios inyectada
+     * @param {typeof Product} ProductModel - Modelo inyectado de producto
+     * @returns {Promise<Object>} Resultado con el producto actualizado
+     */
+    static async updateProduct(productId, updateData, ServiceClass, ProductModel) {
+        const updatedProduct = await ServiceClass.updateData(ProductModel, productId, updateData);
         return { success: true, product: updatedProduct };
     }
 
-    // Eliminar un producto
-    static async removeProduct(productId) {
-        // Verificamos si el producto existe
-        const product = await this.getById(Product, productId);
+    /**
+     * Elimina un producto del sistema.
+     * @param {string} productId - ID del producto
+     * @param {typeof Service} ServiceClass - Clase base de servicios inyectada
+     * @param {typeof Product} ProductModel - Modelo inyectado de producto
+     * @returns {Promise<Object>} Resultado de la operación
+     */
+    static async removeProduct(productId, ServiceClass, ProductModel) {
+        const product = await ServiceClass.getById(ProductModel, productId);
         if (!product) {
-        return { success: false, message: "Producto no encontrado" };
+            return { success: false, message: "Producto no encontrado" };
         }
-        
-        // Usamos el método findByIdAndDelete para eliminar el producto
-        const deletedProduct = await Product.findByIdAndDelete(productId);
+        const deletedProduct = await ProductModel.findByIdAndDelete(productId);
         return { success: true, message: "Producto eliminado", product: deletedProduct };
     }
 
-    // Consultar la lista de administradores
-    static async getAdmins() {
-        // Obtenemos todos los usuarios que son administradores
-        const admins = await AdminUser.find(); // Consulta simple sin lógica de negocio compleja
-        return { success: true, admins };
+    /**
+     * Obtiene la lista de todos los usuarios customer del sistema.
+     * @param {typeof CustomerUser} CustomerUserModel - Modelo inyectado de usuario customer
+     * @returns {Promise<Object>} Lista de usuarios
+     */
+    static async getCustomers(CustomerUserModel) {
+        const customers = await CustomerUserModel.find();
+        return { success: true, customers };
     }
 }
 

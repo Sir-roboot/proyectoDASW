@@ -1,7 +1,6 @@
 import FetchAuthentication from './FetchAuthentication.js';
 
-// 🌐 URL base de tu API (ajústala según tu configuración)
-const API_BASE = 'http://localhost:3000/api';
+const API_BASE = 'http://localhost:3000/CampingHouse';
 
 // Espera a que cargue el DOM para enganchar formularios y botones
 document.addEventListener('DOMContentLoaded', () => {
@@ -31,37 +30,41 @@ document.addEventListener('DOMContentLoaded', () => {
     // 1) LOGIN
     // ————————————————————————————————
     loginForm.addEventListener('submit', async event => {
-        event.preventDefault(); // evita que recargue la página
+        event.preventDefault();
 
-        // 1️⃣ Captura datos del formulario
-        const email     = document.getElementById('loginEmail').value;
-        const password  = document.getElementById('loginPassword').value;
+        const email = document.getElementById('loginEmail').value;
+        const password = document.getElementById('loginPassword').value;
 
         try {
-            // 2️⃣ Lanza la petición POST al endpoint de login
-            const res = await FetchAuthentication.fetchAuth(`${API_BASE}/auth/login`, {
-                method: 'POST',                    
-                mode: 'cors',                      
+            const res = await fetch(`${API_BASE}/auth/login`, {
+                method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'  
+                    'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ email, password }) // convierte a JSON
+                body: JSON.stringify({ email, password })
             });
 
-            // 3️⃣ Control de errores HTTP
             if (!res.ok) {
                 const err = await res.json();
-                throw new Error(err.message || 'Error en el login');
+                throw new Error(err.message || 'Login fallido');
             }
 
-            // 6️⃣ Redirige o actualiza la UI
+            const data = await res.json();
+
+            // Guardar tokens después de autenticarse
+            localStorage.setItem(FetchAuthentication.ACCESS_TOKEN_NAME, data.accessToken);
+            localStorage.setItem(FetchAuthentication.REFRESH_TOKEN_NAME, data.refreshToken);
+
+            // Redirigir
+            localStorage.setItem('userRole', data.role);
             window.location.href = './userIndex.html';
-        } 
-        catch (error) {
-            console.error('Login fallido:', error);
-            alert('Login fallido: ' + error.message);
+
+        } catch (err) {
+            console.error('Error en login:', err.message);
+            alert('Login fallido: ' + err.message);
         }
     });
+
 
     // ————————————————————————————————
     // 2) SIGN UP
@@ -79,43 +82,35 @@ document.addEventListener('DOMContentLoaded', () => {
                 street:  document.getElementById('regStreet').value,
                 city:    document.getElementById('regCity').value,
                 state:   document.getElementById('regState').value,
-                zipCode:     document.getElementById('regZip').value,
+                zipCode: document.getElementById('regZip').value,
                 country: document.getElementById('regCountry').value
             }
         };
 
         try {
-            // 2️⃣ POST al endpoint de registro
-            const res = await FetchAuthentication.fetchSetParms(`${API_BASE}/auth/register`, {
+            const res = await fetch(`${API_BASE}/auth/register`, {
                 method: 'POST',
                 mode: 'cors',
-                headers: {
-                'Content-Type': 'application/json'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
             });
 
-            // 3️⃣ Error handling
+            const result = await res.json();
+
             if (!res.ok) {
-                const err = await res.json();
-                throw new Error(err.message || 'Error en el registro');
+                // Muestra el mensaje del servidor (como "usuario ya existe")
+                throw new Error(result.message || 'Error en el registro');
             }
 
+            // Registro exitoso: mostrar formulario de login
+            alert('Registro exitoso. Ahora inicia sesión.');
 
-            // 5️⃣ Opcional: guardar token y redirigir
-            const data = await res.json();
+            // Mostrar login y ocultar registro
+            document.getElementById('loginForm').style.display = 'block';
+            document.getElementById('registerForm').style.display = 'none';
 
-            if (!data.noneExistUser) {
-                window.location.href = './userIndex.html';
-            } else {
-                alert('Usuario ya existente, por favor haz login.');
-                // muestra el formulario de login
-                document.getElementById('loginForm').style.display = 'block';
-                document.getElementById('registerForm').style.display = 'none';
-            }
-        } 
-        catch (error) {
-            console.error('Registro fallido:', error);
+        } catch (error) {
+            console.error('Registro fallido:', error.message);
             alert('Registro fallido: ' + error.message);
         }
     });

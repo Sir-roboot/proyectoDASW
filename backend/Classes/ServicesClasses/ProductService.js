@@ -1,67 +1,112 @@
-const Service = require("../AbstractClasses/Service");
-
-class ProductService extends Service {
+/**
+ * Servicio estático para operaciones CRUD y consultas especializadas sobre productos.
+ */
+class ProductService {
 
     /**
-     * Crea un nuevo producto a partir de los datos dados
-     * @param {Mongoose.Model} model - Modelo de Mongoose
-     * @param {Object} data - Datos del producto
-     * @returns {Promise<Object>} Instancia de clase Product
+     * Crea un nuevo producto con datos validados y transformados.
+     * @param {Mongoose.Model} modelProduct - Modelo Mongoose del producto
+     * @param {Object} data - Datos planos para crear el producto
+     * @param {Function} ProductClass - Clase del dominio Product
+     * @param {typeof Service} ServiceClass - Clase de servicio base para persistencia
+     * @returns {Promise<{message: string}>} Mensaje de éxito
      */
-    static async createProduct(model, data) {
-        return await this.create(model, data);
+    static async createProduct(modelProduct, data, ProductClass, ServiceClass) {
+        const newData = { _id: modelProduct.getNewId(), ...data };
+        const productInstanceVerified = ProductClass.fromObject(newData);
+        const newProductIntance = await ServiceClass.create(
+            modelProduct,
+            productInstanceVerified.classToObjectForMongo()
+        );
+        if (!newProductIntance) throw new Error("Error al crear producto.");
+        return { message: "Producto creado con éxito." };
     }
 
     /**
-     * Obtiene una lista de productos según los filtros dados
-     * @param {Mongoose.Model} model - Modelo de Mongoose
-     * @param {Object} filters - Filtros por clave/valor (p. ej. categoría, marca)
-     * @returns {Promise<Array>} Lista de productos
+     * Actualiza un producto existente por su ID con nuevos datos.
+     * @param {Mongoose.Model} modelProduct - Modelo Mongoose del producto
+     * @param {string} idProduct - ID del producto a actualizar
+     * @param {Object} dataUpdate - Objeto con campos modificados
+     * @param {Function} CategoryClass - Clase del dominio Category
+     * @param {typeof Service} ServiceClass - Clase de servicio base para persistencia
+     * @returns {Promise<boolean>} true si se actualizó correctamente
      */
-    static async getProducts(model, filters) {
+    static async updateProduct(modelProduct, idProduct, dataUpdate, CategoryClass, ServiceClass) {
+        const productInstance = await ProductService.getProductDetails(idProduct, modelProduct, ServiceClass);
+        if (!productInstance) throw new Error("Producto no encontrado.");
+
+        if (dataUpdate.name) productInstance.name = dataUpdate.name;
+        if (dataUpdate.brand) productInstance.brand = dataUpdate.brand;
+        if (dataUpdate.price) productInstance.price = dataUpdate.price;
+        if (dataUpdate.stock) productInstance.stock = dataUpdate.stock;
+        if (dataUpdate.capacity) productInstance.capacity = dataUpdate.capacity;
+        if (dataUpdate.waterProof) productInstance.waterProof = dataUpdate.waterProof;
+        if (dataUpdate.image) productInstance.image = dataUpdate.image;
+        if (dataUpdate.category) {
+            productInstance.category = CategoryClass.fromObject(dataUpdate.category);
+        }
+
+        const data = productInstance.classToObjectForMongo();
+
+        return await ServiceClass.updateData(
+            modelProduct,
+            { _id: productInstance.idProduct },
+            { $set: data }
+        );
+    }
+
+    /**
+     * Elimina un producto dado su ID.
+     * @param {Mongoose.Model} modelProduct - Modelo Mongoose del producto
+     * @param {string} idProduct - ID del producto
+     * @param {typeof Service} ServiceClass - Clase de servicio base
+     * @returns {Promise<boolean>} true si fue eliminado correctamente
+     */
+    static async deleteProduct(modelProduct, idProduct, ServiceClass) {
+        return await ServiceClass.deleteById(modelProduct, idProduct);
+    }
+
+    /**
+     * Obtiene un producto por su ID y lo transforma a objeto plano.
+     * @param {string} idProduct - ID del producto
+     * @param {Mongoose.Model} modelProduct - Modelo Mongoose del producto
+     * @param {typeof Service} ServiceClass - Clase de servicio base
+     * @returns {Promise<Object>} Objeto plano del producto
+     */
+    static async getProductDetails(idProduct, modelProduct, ServiceClass) {
+        const doc = await ServiceClass.getById(modelProduct, idProduct);
+        return doc.classToObjectForMongo();
+    }
+
+    /**
+     * Obtiene productos que cumplen con filtros dinámicos enviados como query.
+     * @param {Mongoose.Model} modelProduct - Modelo Mongoose del producto
+     * @param {Object} filters - Filtros como { brand, minPrice, waterproof }
+     * @param {typeof Service} ServiceClass - Clase de servicio base
+     * @returns {Promise<Array<Object>>} Lista de productos como instancias de clase
+     */
+    static async getProducts(modelProduct, filters, ServiceClass) {
         const query = {};
+
         for (const [key, value] of Object.entries(filters)) {
             if (Array.isArray(value)) {
                 query[key] = { $in: value };
+            } else if (value === 'true') {
+                query[key] = true;
+            } else if (value === 'false') {
+                query[key] = false;
+            } else if (key === 'minPrice') {
+                query.price = query.price || {};
+                query.price.$gte = Number(value);
+            } else if (key === 'maxPrice') {
+                query.price = query.price || {};
+                query.price.$lte = Number(value);
             } else {
                 query[key] = value;
             }
         }
-        return await model.find(query).select("name image");
-    }
 
-    /**
-     * Actualiza un producto existente por su ID
-     * @param {string} id - ID del producto
-     * @param {Mongoose.Model} model - Modelo de Mongoose
-     * @param {Object} dataUpdate - Campos a actualizar
-     * @returns {Promise<Object>} Producto actualizado como instancia de clase
-     */
-    static async updateProduct(id, model, dataUpdate) {
-        await model.findByIdAndUpdate(id, dataUpdate);
-        const updated = await model.findById(id).lean();
-        return model.toClassInstance(updated);
-    }
-
-    /**
-     * Elimina un producto por su ID
-     * @param {string} id - ID del producto
-     * @param {Mongoose.Model} model - Modelo de Mongoose
-     * @returns {Promise<Object>} Resultado de la operación
-     */
-    static async deleteProduct(id, model) {
-        return await model.findByIdAndDelete(id);
-    }
-
-    /**
-     * Obtiene los detalles completos de un producto por ID
-     * @param {string} id - ID del producto
-     * @param {Mongoose.Model} model - Modelo de Mongoose
-     * @returns {Promise<Object>} Instancia de clase Product
-     */
-    static async getProductDetails(id, model) {
-        const doc = await model.findById(id).lean();
-        return model.toClassInstance(doc);
+        return await ServiceClass.findMany(modelProduct, query, ['category']);
     }
 }
 

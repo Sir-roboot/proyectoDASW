@@ -1,100 +1,107 @@
 const CartService = require('../../Classes/ServicesClasses/CartService');
 const Service = require("../../AbstractClasses/Service.js");
-const { CustomerUser : User, Cart, Sale, Product} = require("../../Models/models.js");
+const { CustomerUser: User, Cart, Sale, Product } = require("../../Models/models.js");
 const SaleService = require('../../Classes/ServicesClasses/SaleService.js');
 const SaleClass = require('../../Classes/Sale.js');
 const ProductSaleClass = require('../../Classes/ProductSale.js');
 const CartClass = require("../../Classes/Cart.js");
 
+/**
+ * Controlador de rutas relacionadas con el carrito de compras.
+ * Expone métodos estáticos para cada operación disponible.
+ */
 class CartRoutes {
-    //Listo
+
+    /**
+     * Obtiene el carrito actual del usuario.
+     * @param {import('express').Request} req
+     * @param {import('express').Response} res
+     */
     static async getCart(req, res) {
         try {
             const result = await CartService.getCart(req.userId, User, Cart, Service);
-
-            if(!result) {
-                return res.status(404).json({ message : "Carrito no encontrado"});
-            }
-
-            const cartObject = result.classToObjectForMongo();
-            res.status(200).json(cartObject);
+            const cartObject = result?.classToObjectForMongo();
+            res.status(result ? 200 : 404).json(cartObject || { message: "Carrito no encontrado" });
         } catch (err) {
             res.status(500).json({ success: false, error: err.message });
         }
     }
-    
-    //Listo
+
+    /**
+     * Agrega un producto al carrito del usuario.
+     * @param {import('express').Request} req
+     * @param {import('express').Response} res
+     */
     static async addToCart(req, res) {
         try {
-            const { productId } = req.body;
-            const result = await CartService.addToCart(req.userId, productId, User, Cart,Product,CartClass,Service);
-            if(!result) {
-                return result.status(404).json({ message : "No se logro agregar el articulo al carrito."})
-            }
-
-            res.status(200).json({ message : "Producto agregado al carrito de manera exitosa."});
+            const { amount, productId } = req.body;
+            const result = await CartService.addToCart(req.userId, productId, amount, User, Cart, Product, CartClass, Service);
+            res.status(result ? 200 : 404).json({ message: result ? "Producto agregado al carrito de manera exitosa." : "No se logró agregar el artículo al carrito." });
         } catch (err) {
             res.status(500).json({ success: false, error: err.message });
         }
     }
 
-    //Listo
+    /**
+     * Actualiza la cantidad de un producto en el carrito.
+     * @param {import('express').Request} req
+     * @param {import('express').Response} res
+     */
     static async updateCartItemAmount(req, res) {
         try {
             const { productId, newAmount } = req.body;
             const result = await CartService.updateCartItemAmount(req.userId, User, Cart, productId, newAmount, Service);
-            if(!result) {
-                return result.status(404).json({ message : "No se logro reflejar el cambio en el carrito."})
-            }
-
-            res.status(200).json({ message : "Cambio realizado con exito."});
+            res.status(result ? 200 : 404).json({ message: result ? "Cambio realizado con éxito." : "No se logró reflejar el cambio en el carrito." });
         } catch (err) {
             res.status(500).json({ success: false, error: err.message });
         }
     }
 
-    //Listo
+    /**
+     * Elimina un producto del carrito por ID.
+     * @param {import('express').Request} req
+     * @param {import('express').Response} res
+     */
     static async removeCartItem(req, res) {
         try {
-            const result = await CartService.removeCartItem(req.params.userId, req.params.productId);
-            if(!result) {
-                return result.status(404).json({ message : "No se logro reflejar el cambio en el carrito."})
-            }
-            res.status(200).json({ message : "Eliminacion del producto del carrito exitosa."});
+            const result = await CartService.removeCartItem(req.userId, req.params.productId, User, Cart, Service);
+            res.status(result ? 200 : 404).json({ message: result ? "Eliminación del producto del carrito exitosa." : "No se logró reflejar el cambio en el carrito." });
         } catch (err) {
             res.status(500).json({ success: false, error: err.message });
         }
     }
 
-    //Listo
+    /**
+     * Realiza la compra de los productos del carrito.
+     * @param {import('express').Request} req
+     * @param {import('express').Response} res
+     */
     static async purchesCart(req, res) {
         try {
-            const result = await CartService.purchase(req.userId, User, Cart, Service,
-                async (cartInstance) => SaleService.createSale(Sale,SaleClass,ProductSaleClass,Service,cartInstance),
+            const result = await CartService.purchase(
+                req.userId,
+                User,
+                Cart,
+                Service,
+                async (cartInstance) => SaleService.createSale(Sale, SaleClass, ProductSaleClass, Service, cartInstance),
                 async (saleId) => SaleService.addSaleToUserSales(req.userId, saleId, User, Sale, Service)
             );
-
-            if(!result) {
-                return result.status(404).json({ message : "Hubo un error al crear la venta."});
-            }
-
-            res.status(200).json({message : "Venta realizada con éxito"});
+            res.status(result ? 200 : 404).json({ message: result ? "Venta realizada con éxito" : "Hubo un error al crear la venta." });
         } catch (err) {
             res.status(500).json({ success: false, error: err.message });
         }
     }
 
-    //Listo
+    /**
+     * Limpia por completo el carrito del usuario.
+     * @param {import('express').Request} req
+     * @param {import('express').Response} res
+     */
     static async cleanCart(req, res) {
         try {
-            const result =  await CartService.emptyCart(req.userId, User, Cart, Service);
-            
-            if(!result) {
-                return result.status(404).json({ message : "Hubo un error al limpiar el carrito."});
-            }
-
-            res.status(200).json(result);
-        } catch (error) {
+            const result = await CartService.emptyCart(req.userId, User, Cart, Service);
+            res.status(result ? 200 : 404).json({ message: result ? "Carrito limpiado con éxito." : "Hubo un error al limpiar el carrito." });
+        } catch (err) {
             res.status(500).json({ success: false, error: err.message });
         }
     }

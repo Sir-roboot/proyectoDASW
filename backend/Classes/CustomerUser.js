@@ -1,3 +1,7 @@
+/**
+ * Clase que representa a un usuario cliente dentro del sistema.
+ * Hereda de User e incluye historial de compras, carrito y rol fijo.
+ */
 const User = require("./AbstractClasses/User");
 const Address = require("./Address");
 const Cart = require("./Cart");
@@ -11,112 +15,99 @@ class CustomerUser extends User {
     static ROLES = ["customer"];
 
     /**
+     * Constructor de CustomerUser
      * @param {string} idUser
+     * @param {string} name
      * @param {string} userName
      * @param {string} email
      * @param {string} password
-     * @param {string} name
-     * @param {Date} registerDate
-     * @param {string} role
-     * @param {Cart} cart
-     * @param {List<Sale>} purchaseHistory
-     * @param {Address} address
+     * @param {Cart} [cart]
+     * @param {Array<Sale>} [purchaseHistory]
+     * @param {Address} [address]
      */
-    constructor(idUser, name, userName, email, password, registerDate, role, cart, purchaseHistory, address) {
+    constructor(idUser, name, userName, email, password, cart = new Cart(), purchaseHistory = [], address) {
+        const registerDate = new Date();
         super(idUser, userName, email, password, name, registerDate, address);
-        this.role = role;
-        this.purchaseHistory = purchaseHistory || [];
-        this.cart = cart || null;
+
+        this.#role = "customer";
+        this.purchaseHistory = purchaseHistory;
+        this.cart = cart;
     }
 
-    // Setter de role con validación
-    set role(role) {
-        if (typeof role !== 'string' || !CustomerUser.ROLES.includes(role)) {
-            throw new TypeError(`role debe ser uno de: ${CustomerUser.ROLES.join(', ')}`);
-        }
-        this.#role = role;
-    }
+    get role() { return this.#role; }
 
-    get role() {
-        return this.#role;
-    }
-
-    // Setter de purchaseHistory con validación
-    set purchaseHistory(purchaseHistory) {
-        if (!Array.isArray(purchaseHistory)) {
+    get purchaseHistory() { return this.#purchaseHistory; }
+    set purchaseHistory(history) {
+        if (!Array.isArray(history)) {
             throw new TypeError("purchaseHistory debe ser un array.");
         }
-        for (const sale of purchaseHistory) {
+        for (const sale of history) {
             if (!(sale instanceof Sale)) {
-                throw new TypeError("Todos los elementos de purchaseHistory deben ser instancias de Sale.");
+                throw new TypeError("Todos los elementos deben ser instancias de Sale.");
             }
         }
-        this.#purchaseHistory = purchaseHistory;
+        this.#purchaseHistory = history;
     }
 
-    get purchaseHistory() {
-        return this.#purchaseHistory;
-    }
-
-    // Setter de cart con validación
+    get cart() { return this.#cart; }
     set cart(cart) {
-        if (cart !== null && !(cart instanceof Cart)) {
-            throw new TypeError("cart debe ser una instancia de Cart o null.");
+        if (!(cart instanceof Cart)) {
+            throw new TypeError("cart debe ser una instancia de Cart.");
         }
         this.#cart = cart;
     }
 
-    get cart() {
-        return this.#cart;
-    }
-
+    /**
+     * Convierte un objeto plano en una instancia de CustomerUser.
+     * @param {Object} obj
+     * @returns {CustomerUser}
+     */
     static fromObject(obj) {
         if (!obj || typeof obj !== 'object') {
             throw new TypeError("fromObject espera un objeto válido.");
         }
-    
+
         const {
             _id,
             name,
             userName,
             email,
             password,
-            registerDate,
-            role,
             cart,
             sales,
             address
         } = obj;
-    
-        if (!name || !userName || !email || !password || !role) {
+
+        if (!name || !userName || !email || !password) {
             throw new Error("Faltan campos obligatorios para crear un CustomerUser.");
         }
-    
-        const cartInstance = cart instanceof Cart ? cart : (cart ? Cart.fromObject(cart) : null);
-    
+
+        const cartInstance = cart instanceof Cart ? cart : (cart ? Cart.fromObject(cart) : new Cart());
+
         const saleInstances = Array.isArray(sales)
             ? sales.map(s => (s instanceof Sale ? s : Sale.fromObject(s)))
             : [];
-    
+
         const addressInstance = address instanceof Address
             ? address
             : (address ? Address.fromObject(address) : null);
-    
+
         return new CustomerUser(
             _id?.toString() || undefined,
             name,
             userName,
             email,
             password,
-            registerDate ? new Date(registerDate) : new Date(),
-            role,
             cartInstance,
             saleInstances,
             addressInstance
         );
     }
-    
-    
+
+    /**
+     * Convierte la instancia en un objeto plano compatible con MongoDB.
+     * @returns {Object}
+     */
     classToObjectForMongo() {
         return {
             _id: this.idUser,
@@ -126,9 +117,9 @@ class CustomerUser extends User {
             password: this.password,
             registerDate: this.registerDate,
             role: this.role,
-            cart: this.cart ? this.cart.toObjectForMongo() : {},
+            cart: this.cart?.classToObjectForMongo?.() || {},
             sales: this.purchaseHistory.map(sale => sale.idSale),
-            address: this.address ? this.address.toObjectForMongo() : undefined,
+            address: this.address?.classToObjectForMongo?.()
         };
     }
 }

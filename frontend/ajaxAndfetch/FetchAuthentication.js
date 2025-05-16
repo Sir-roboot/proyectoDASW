@@ -15,7 +15,7 @@ class FetchAuthentication {
 
         //En caso de que el token de acceso expire se hace uan nueva peticon pero con el token de refresh
         if (res.status === 401) {
-            const refreshRes = await fetch('/refresh', {
+            const refreshRes = await fetch('http://localhost:3000/CampingHouse/user/auth/refresh', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -28,7 +28,7 @@ class FetchAuthentication {
                 //Se actualiza la variable de token de acceso del ladro del front
                 const data = await refreshRes.json();
                 localStorage.setItem(FetchAuthentication.ACCESS_TOKEN_NAME, data.accessToken);
-                //La petcion se hacve de nuevo al servidor con los mismos parametros pero con el nuevo token de acceso
+                //La petcion se hace de nuevo al servidor con los mismos parametros pero con el nuevo token de acceso
                 return await fetch(urlPath, {
                     ...options,
                     headers: {
