@@ -1,27 +1,4 @@
 import FetchAuthentication from './FetchAuthentication.js';
-
-async function loadNavbar() {
-    try {
-        const resp = await fetch('./navbar.html');
-        const html = await resp.text();
-        document.getElementById('navbar-placeholder').innerHTML = html;
-        console.log(document.getElementById('logoutBtn'))
-        // Inyecta manualmente navbar.js DESPUÉS de insertar el HTML
-        const script = document.createElement('script');
-        script.src = '../ajaxAndfetch/navbar.js';
-        script.onload = () => {
-            // Si quieres puedes llamar aquí a funciones específicas si navbar.js las define globalmente
-            console.log('navbar.js cargado y ejecutado correctamente');
-        };
-        document.body.appendChild(script);
-    } catch (err) {
-        console.error('Error al cargar el navbar:', err);
-    }
-}
-
-loadNavbar();
-  
-const API_BASE = 'http://localhost:3000/CampingHouse';
   
 // Campos de perfil disponibles para edición
 const editableFields = [
@@ -30,13 +7,14 @@ const editableFields = [
 ];
   
 document.addEventListener('DOMContentLoaded', async () => {
+    FetchAuthentication.loadNavbar();
     // Referencias al DOM
     const profileDataContainer = document.getElementById('profileData');
     const historyBody = document.getElementById('salesHistory').querySelector('tbody');
   
     // Cargar datos de usuario
     try {
-        const res = await fetch(`${API_BASE}/profile`, {
+        const res = await fetch(`${FetchAuthentication.API_BASE}/profile`, {
             method: 'GET',
             mode: 'cors',
             headers: {
@@ -82,7 +60,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             saveBtn.addEventListener('click', async () => {
             const value = input.value;
             try {
-                const res = await fetch(`${API_BASE}/profile`, {
+                const res = await fetch(`${FetchAuthentication.API_BASE}/profile`, {
                 method: 'PATCH',
                 mode: 'cors',
                 headers: {

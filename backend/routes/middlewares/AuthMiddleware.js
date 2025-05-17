@@ -6,7 +6,7 @@ class AuthMiddleware {
         const token = authHeader && authHeader.split(' ')[1];
 
         if (!token) {
-            return res.status(401).json({ message: 'Token no proporcionado' });
+            return res.status(401).json({ success: false});
         }
 
         jwt.verify(token, process.env.ACCESS_SECRET, (err, decoded) => {

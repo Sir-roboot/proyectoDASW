@@ -1,37 +1,15 @@
 import FetchAuthentication from './FetchAuthentication.js';
 
-async function loadNavbar() {
-    try {
-        const resp = await fetch('./navbar.html');
-        const html = await resp.text();
-        document.getElementById('navbar-placeholder').innerHTML = html;
-        console.log(document.getElementById('logoutBtn'))
-        // Inyecta manualmente navbar.js DESPUÉS de insertar el HTML
-        const script = document.createElement('script');
-        script.src = '../ajaxAndfetch/navbar.js';
-        script.onload = () => {
-            // Si quieres puedes llamar aquí a funciones específicas si navbar.js las define globalmente
-            console.log('navbar.js cargado y ejecutado correctamente');
-        };
-        document.body.appendChild(script);
-    } catch (err) {
-        console.error('Error al cargar el navbar:', err);
-    }
-}
-
-loadNavbar();
-    
-
-const API_BASE = 'http://localhost:3000/CampingHouse';
-
 document.addEventListener('DOMContentLoaded', async () => {
+    FetchAuthentication.loadNavbar();
+    
     const params = new URLSearchParams(window.location.search);
     const id = params.get('id');
     if (!id) return console.error('No se proporcionó ID de producto');
 
     try {
         // Obtener detalles del producto
-        const res = await fetch(`${API_BASE}/product/${id}`, {
+        const res = await fetch(`${FetchAuthentication.API_BASE}/product/${id}`, {
             method: 'GET',
             mode: 'cors',
             headers: { 'Accept': 'application/json' }
@@ -39,6 +17,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (!res.ok) throw new Error(`Error ${res.status}: ${res.statusText}`);
         const product = await res.json();
+
+        const loginMessage = document.getElementById('loginMessage');
 
         // Inyectar datos en el HTML
         document.getElementById('bc-name').textContent = product.name;
@@ -50,16 +30,28 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Inyectar imágenes
         const carouselInner = document.getElementById('carouselInner');
         carouselInner.innerHTML = '';
-        product.images.forEach((imgUrl, idx) => {
+        if (product.images && product.images.length) {
+            product.images.forEach((imgUrl, idx) => {
+                const div = document.createElement('div');
+                div.className = 'carousel-item' + (idx === 0 ? ' active' : '');
+                const img = document.createElement('img');
+                img.src = imgUrl;
+                img.className = "d-block w-100 carousel-img";
+                img.alt = product.name;
+                div.appendChild(img);
+                carouselInner.appendChild(div);
+            });
+        } else {
+            // Imagen placeholder
             const div = document.createElement('div');
-            div.className = 'carousel-item' + (idx === 0 ? ' active' : '');
+            div.className = 'carousel-item active';
             const img = document.createElement('img');
-            img.src = imgUrl;
+            img.src = 'https://via.placeholder.com/400x300?text=Sin+Imagen';
             img.className = "d-block w-100 carousel-img";
-            img.alt = product.name;
+            img.alt = 'Sin imagen';
             div.appendChild(img);
             carouselInner.appendChild(div);
-        });
+        }
 
         // Inyectar opciones de cantidad
         const quantitySelect = document.getElementById('quantity');
@@ -79,7 +71,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             try {
-                const response = await FetchAuthentication.fetchAuth(`${API_BASE}/user/cart/add`, {
+                const response = await FetchAuthentication.fetchAuth(`${FetchAuthentication.API_BASE}/user/cart/add`, {
                     method: 'POST',
                     mode: 'cors',
                     headers: {
@@ -95,8 +87,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (!response.ok) throw new Error('No se pudo agregar al carrito');
                 alert('Producto agregado al carrito exitosamente');
             } catch (err) {
-                console.error('Error al agregar al carrito:', err);
-                alert('Ocurrió un error al agregar al carrito');
+                loginMessage.textContent = err.message || 'Error al enviar la peticion.';
+                loginMessage.className = 'alert alert-danger';
+                loginMessage.classList.remove('d-none');
+                setTimeout(() => loginMessage.classList.add('d-none'), 3000);
             }
         });
 

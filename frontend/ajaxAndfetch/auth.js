@@ -1,7 +1,5 @@
 import FetchAuthentication from './FetchAuthentication.js';
 
-const API_BASE = 'http://localhost:3000/CampingHouse';
-
 // Espera a que cargue el DOM para enganchar formularios y botones
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -34,9 +32,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const email = document.getElementById('loginEmail').value;
         const password = document.getElementById('loginPassword').value;
+        const loginMessage = document.getElementById('loginMessage');
+        const loginFormElement = document.getElementById('loginForm');
 
         try {
-            const res = await fetch(`${API_BASE}/auth/login`, {
+            const res = await FetchAuthentication.fetchAuthSetParameters(`${FetchAuthentication.API_BASE}/auth/login`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -44,24 +44,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify({ email, password })
             });
 
-            if (!res.ok) {
-                const err = await res.json();
-                throw new Error(err.message || 'Login fallido');
-            }
-
             const data = await res.json();
 
-            // Guardar tokens después de autenticarse
-            localStorage.setItem(FetchAuthentication.ACCESS_TOKEN_NAME, data.accessToken);
-            localStorage.setItem(FetchAuthentication.REFRESH_TOKEN_NAME, data.refreshToken);
-
-            // Redirigir
-            localStorage.setItem('userRole', data.role);
-            window.location.href = './userIndex.html';
+            if (res.ok) {
+                loginFormElement.reset();
+                window.location.href = './index.html';
+            }
+            else {
+                loginMessage.textContent = data.message || 'Error al iniciar sesión';
+                loginMessage.className = 'alert alert-danger';
+                loginMessage.classList.remove('d-none');
+                setTimeout(() => loginMessage.classList.add('d-none'), 3000);
+            }
 
         } catch (err) {
-            console.error('Error en login:', err.message);
-            alert('Login fallido: ' + err.message);
+            loginMessage.textContent = err.message || 'Error al enviar la peticion.';
+            loginMessage.className = 'alert alert-danger';
+            loginMessage.classList.remove('d-none');
+            setTimeout(() => loginMessage.classList.add('d-none'), 3000);
         }
     });
 
@@ -87,8 +87,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         };
 
+        const singupMessage = document.getElementById('singupMessage');
+        const registerFormElement = document.getElementById('registerForm');
+
         try {
-            const res = await fetch(`${API_BASE}/auth/register`, {
+            const res = await fetch(`${FetchAuthentication.API_BASE}/auth/register`, {
                 method: 'POST',
                 mode: 'cors',
                 headers: { 'Content-Type': 'application/json' },
@@ -97,21 +100,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const result = await res.json();
 
-            if (!res.ok) {
-                // Muestra el mensaje del servidor (como "usuario ya existe")
-                throw new Error(result.message || 'Error en el registro');
+            if (res.ok) {
+                singupMessage.textContent = `${result.message}\n¡Registro exitoso! Ahora puedes iniciar sesión.`;
+                singupMessage.className = 'alert alert-success';
+                singupMessage.classList.remove('d-none');
+                setTimeout(() => singupMessage.classList.add('d-none'), 3000);
+                // Mostrar login y ocultar registro
+                loginFormBox.style.display = 'block';
+                registerFormBox.style.display = 'none';
+                // Limpia el formulario
+                registerFormElement.reset();
             }
-
-            // Registro exitoso: mostrar formulario de login
-            alert('Registro exitoso. Ahora inicia sesión.');
-
-            // Mostrar login y ocultar registro
-            document.getElementById('loginForm').style.display = 'block';
-            document.getElementById('registerForm').style.display = 'none';
-
-        } catch (error) {
-            console.error('Registro fallido:', error.message);
-            alert('Registro fallido: ' + error.message);
+            else {
+                // Muestra el mensaje del servidor (como "usuario ya existe")
+                singupMessage.textContent = `¡Registro fallido! ${result.message}`;
+                singupMessage.className = 'alert alert-danger';
+                singupMessage.classList.remove('d-none');
+                setTimeout(() => singupMessage.classList.add('d-none'), 3000);
+            }
+        } catch (err) {
+            singupMessage.textContent = `¡Registro fallido! ${err.message}`;
+            singupMessage.className = 'alert alert-danger';
+            singupMessage.classList.remove('d-none');
+            setTimeout(() => singupMessage.classList.add('d-none'), 3000);
         }
     });
 });

@@ -166,22 +166,31 @@ class Service {
     }
 
     /**
-     * Busca múltiples documentos con filtros y opcional populate.
-     * @param {Mongoose.Model} model - Modelo mongoose
-     * @param {Object} params - Filtros de búsqueda
-     * @param {Array<string>} populate - Campos a poblar (opcional)
-     * @returns {Promise<Array<Object>>} Lista de instancias
+     * Busca múltiples documentos de un modelo Mongoose con filtros, populate, paginación y orden opcional.
+     * 
+     * @param {Mongoose.Model} model - El modelo de Mongoose sobre el que se va a buscar.
+     * @param {Object} [params={}] - Objeto con los filtros de búsqueda.
+     * @param {Array<string>} [populate=[]] - Lista de campos a poblar (populate) opcionalmente.
+     * @param {number} [skip=0] - Número de documentos a saltar (para paginación). Por defecto es 0.
+     * @param {number} [limit=0] - Máximo de documentos a regresar (0 = sin límite).
+     * @param {Object|null} [sort=null] - Objeto con el criterio de ordenamiento (por ejemplo: { price: 1 } para ascendente).
+     * @returns {Promise<Array<Object>>} - Promesa que resuelve a una lista de instancias del modelo (convertidas con toClassInstance).
      */
-    static async findMany(model, params = {}, populate = []) {
+    static async findMany(model, params = {}, populate = [], skip = 0, limit = 0, sort = null) {
         let query = model.find(params);
+
+        if (sort) query = query.sort(sort);
+        if (skip > 0) query = query.skip(skip);
+        if (limit > 0) query = query.limit(limit);
 
         if (populate.length) {
             populate.forEach(path => query = query.populate(path));
         }
 
-        const docList = await query;
+        const docList = await query.lean();
         return docList.map(doc => model.toClassInstance(Service.normalizeMongoDoc(doc)));
     }
+
 }
 
 module.exports = Service;

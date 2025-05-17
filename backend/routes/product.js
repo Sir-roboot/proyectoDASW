@@ -21,4 +21,10 @@ router.get('/:id', ProductRoutes.getProductById);
 // Obtiene todos los productos, opcionalmente filtrados por query params
 router.get('/', ProductRoutes.getAllProducts);
 
+// Obtener las categorias exitentes
+router.get('/category', ProductRoutes.getCategories);
+
+// Obtener rango de precios
+router.get('/prices-range', ProductRoutes.prices);
+
 module.exports = router;

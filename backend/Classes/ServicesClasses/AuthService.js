@@ -76,14 +76,14 @@ class AuthService {
         });
 
         if (existingUser) {
-            return { noneExistUser: false, message: "El usuario ya existe" };
+            return { success: false, message: "El usuario ya existe." };
         }
 
         // 2. Encriptar contraseña y crear usuario
         userData.password = await bcrypt.hash(userData.password, 10);
         await createUserMethod(userData);
 
-        return { noneExistUser: true };
+        return { success: true , message: "Usuario creado."};
     }
 }
 

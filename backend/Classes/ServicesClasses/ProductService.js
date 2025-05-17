@@ -41,7 +41,7 @@ class ProductService {
         if (dataUpdate.stock) productInstance.stock = dataUpdate.stock;
         if (dataUpdate.capacity) productInstance.capacity = dataUpdate.capacity;
         if (dataUpdate.waterProof) productInstance.waterProof = dataUpdate.waterProof;
-        if (dataUpdate.image) productInstance.image = dataUpdate.image;
+        if (dataUpdate.images) productInstance.images = dataUpdate.images;
         if (dataUpdate.category) {
             productInstance.category = CategoryClass.fromObject(dataUpdate.category);
         }
@@ -86,9 +86,11 @@ class ProductService {
      * @returns {Promise<Array<Object>>} Lista de productos como instancias de clase
      */
     static async getProducts(modelProduct, filters, ServiceClass) {
+        const { page = 1, limit = 6, ...realFilters } = filters;
+
         const query = {};
 
-        for (const [key, value] of Object.entries(filters)) {
+        for (const [key, value] of Object.entries(realFilters)) {
             if (Array.isArray(value)) {
                 query[key] = { $in: value };
             } else if (value === 'true') {
@@ -96,17 +98,25 @@ class ProductService {
             } else if (value === 'false') {
                 query[key] = false;
             } else if (key === 'minPrice') {
-                query.price = query.price || {};
+                query.price = {};
                 query.price.$gte = Number(value);
             } else if (key === 'maxPrice') {
-                query.price = query.price || {};
+                query.price = {};
                 query.price.$lte = Number(value);
             } else {
                 query[key] = value;
             }
         }
+        
+        const skip = (Number(page) - 1) * Number(limit);
 
-        return await ServiceClass.findMany(modelProduct, query, ['category']);
+        return await ServiceClass.findMany(modelProduct, query, ['category'], skip , Number(limit));
+    }
+
+    static async getPrices(modelProduct, ServiceClass) {
+        const min = await ServiceClass.findMany(modelProduct, {}, [], 0, 1, {price : -1});
+        const max = await ServiceClass.findMany(modelProduct, {}, [], 0, 1, {price : 1});
+        return [min, max];
     }
 }
 

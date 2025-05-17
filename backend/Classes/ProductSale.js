@@ -18,13 +18,13 @@ class ProductSale extends Product {
      * @param {number} stock
      * @param {string} capacity
      * @param {boolean} waterproof
-     * @param {string} image
+     * @param {List<string>} images
      * @param {Category} category
      * @param {number} amountToBuy - Cantidad comprada
      * @param {number} [priceTotal] - Precio total (opcional, se calcula si no se da)
      */
-    constructor(idProduct, name, brand, price, stock, capacity, waterproof, image, category, amountToBuy, priceTotal) {
-        super(idProduct, name, brand, price, stock, capacity, waterproof, image, category);
+    constructor(idProduct, name, brand, price, stock, capacity, waterproof, images, category, amountToBuy, priceTotal) {
+        super(idProduct, name, brand, price, stock, capacity, waterproof, images, category);
         this.amountToBuy = amountToBuy;
         this.priceTotal = priceTotal ?? (amountToBuy * price);
     }
@@ -80,7 +80,7 @@ class ProductSale extends Product {
             stock = 0,
             capacity = '',
             waterproof = false,
-            image = '',
+            images = '',
             category,
             amountBought,
             priceTotal
@@ -102,7 +102,7 @@ class ProductSale extends Product {
             stock,
             capacity,
             waterproof,
-            image,
+            images,
             categoryInstance,
             amountBought,
             priceTotal

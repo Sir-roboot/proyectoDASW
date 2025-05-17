@@ -37,7 +37,7 @@ const ProductSaleSchema = new mongoose.Schema({
     stock: { type: Number },
     capacity: { type: String },
     waterproof: { type: Boolean },
-    image: { type: String },
+    images: [{ type: String }],
     category: {
         name: { type: String, required: true },
         description: { type: String }
@@ -53,7 +53,7 @@ const ProductSchema = new mongoose.Schema({
     stock: { type: Number, required: true },
     capacity: { type: String },
     waterproof: { type: Boolean },
-    image: { type: String },
+    images: [{ type: String }],
     category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category' }
 });
 

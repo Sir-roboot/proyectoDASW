@@ -11,7 +11,7 @@ class Product {
     #stock;
     #capacity;
     #waterproof;
-    #image;
+    #images;
     #category;
 
     /**
@@ -23,10 +23,10 @@ class Product {
      * @param {number} stock - Stock disponible
      * @param {string} capacity - Capacidad (opcional)
      * @param {boolean} waterproof - Si es impermeable
-     * @param {string} image - URL de imagen (opcional)
+     * @param {List<string>} images - URLs de imagenes (opcional)
      * @param {Category} category - Instancia de Category
      */
-    constructor(idProduct, name, brand, price, stock, capacity, waterproof, image, category) {
+    constructor(idProduct, name, brand, price, stock, capacity, waterproof, images, category) {
         this.idProduct = idProduct;
         this.name = name;
         this.brand = brand;
@@ -34,7 +34,7 @@ class Product {
         this.stock = stock;
         this.capacity = capacity;
         this.waterproof = waterproof;
-        this.image = image;
+        this.images = images;
         this.category = category;
     }
 
@@ -96,12 +96,17 @@ class Product {
         this.#waterproof = waterproof;
     }
 
-    get image() { return this.#image; }
-    set image(image) {
-        if (image && typeof image !== 'string') {
-            throw new TypeError("image debe ser un string.");
+    get images() { return this.#images; }
+    set images(images) {
+        if (!Array.isArray(images)) {
+            throw new TypeError("images debe ser un arreglo.");
         }
-        this.#image = image?.trim() || '';
+        for (const item of items) {
+            if (!(typeof images === 'string')) {
+                throw new TypeError("Todos los elementos de images debe ser un string.");
+            }
+        }
+        this.#images = images;
     }
 
     get category() { return this.#category; }
@@ -125,7 +130,7 @@ class Product {
             stock: this.stock,
             capacity: this.capacity,
             waterproof: this.waterproof,
-            image: this.image,
+            images: this.images,
             category: this.category.classToObjectForMongo()
         };
     }
@@ -148,7 +153,7 @@ class Product {
             stock,
             capacity,
             waterproof,
-            image,
+            images,
             category
         } = obj;
 
@@ -168,7 +173,7 @@ class Product {
             stock,
             capacity,
             waterproof,
-            image,
+            images,
             categoryInstance
         );
     }

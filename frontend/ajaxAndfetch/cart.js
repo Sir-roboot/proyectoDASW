@@ -1,26 +1,7 @@
 import FetchAuthentication from './FetchAuthentication.js';
 
-// ✅ Conservamos loadNavbar afuera como en tu original
-async function loadNavbar() {
-    try {
-        const resp = await fetch('./navbar.html');
-        const html = await resp.text();
-        document.getElementById('navbar-placeholder').innerHTML = html;
-        const script = document.createElement('script');
-        script.src = '../ajaxAndfetch/navbar.js';
-        script.onload = () => {
-            console.log('navbar.js cargado y ejecutado correctamente');
-        };
-        document.body.appendChild(script);
-    } catch (err) {
-        console.error('Error al cargar el navbar:', err);
-    }
-}
-
-const API_BASE = 'http://localhost:3000/CampingHouse';
-
 document.addEventListener('DOMContentLoaded', () => {
-    loadNavbar();
+    FetchAuthentication.loadNavbar();
     const cartContainer    = document.getElementById('cartItems');
     const summaryContainer = document.getElementById('cartSummary');
     const checkoutBtn      = document.getElementById('checkoutBtn');
@@ -31,7 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function cargarCarrito() {
         try {
-            const res = await FetchAuthentication.fetchAuth(`${API_BASE}/user/cart`);
+            const res = await FetchAuthentication.fetchAuth(`${FetchAuthentication.API_BASE}/user/cart`);
             const data = await res.json();
             renderCart(data.cart.items || []);
         } catch (error) {
@@ -92,7 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function actualizarCantidad(productId, cantidad) {
         try {
-            await FetchAuthentication.fetchAuth(`${API_BASE}/user/cart/update`, {
+            await FetchAuthentication.fetchAuth(`${FetchAuthentication.API_BASE}/user/cart/update`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ productId, quantity: cantidad })
@@ -105,7 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function eliminarProducto(productId) {
         try {
-            await FetchAuthentication.fetchAuth(`${API_BASE}/user/cart/remove/${productId}`, {
+            await FetchAuthentication.fetchAuth(`${FetchAuthentication.API_BASE}/user/cart/remove/${productId}`, {
                 method: 'DELETE'
             });
             cargarCarrito();
@@ -116,7 +97,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function vaciarCarrito() {
         try {
-            await FetchAuthentication.fetchAuth(`${API_BASE}/user/cart/clean`, {
+            await FetchAuthentication.fetchAuth(`${FetchAuthentication.API_BASE}/user/cart/clean`, {
                 method: 'DELETE'
             });
             cargarCarrito();
@@ -127,7 +108,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function realizarCompra() {
         try {
-            const res = await FetchAuthentication.fetchAuth(`${API_BASE}/user/cart/purchase`, {
+            const res = await FetchAuthentication.fetchAuth(`${FetchAuthentication.API_BASE}/user/cart/purchase`, {
                 method: 'POST'
             });
             const result = await res.json();
